@@ -1,0 +1,46 @@
+name: Build SNU Appendard
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fontforge python3-fonttools make wget jq unzip zip
+
+      - name: Install Typst
+        uses: typst-community/setup-typst@v4
+
+      - name: Test
+        run: make test
+
+      - name: Build distribution
+        run: make distclean && make sources && make build && make specimen && make dist
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: snu-appendard
+          path: |
+            dist/*.zip
+            specimen/specimen.pdf
+
+      - name: Publish release asset
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip

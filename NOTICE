@@ -1,0 +1,22 @@
+SNU Appendard
+=============
+
+SNU Appendard is a derivative work prepared by Hyeshik Chang.
+It keeps Hangul and CJK glyphs from Pretendard, imports Inter non-CJK outlines
+for both upright and italic styles, preserves Pretendard-compatible upright
+spacing, adds true Inter italic forms, and emits OpenType/CFF fonts at UPM 1000.
+
+Upstream projects:
+
+- Pretendard by Hyung-jin Kil and contributors.
+- Inter by Rasmus Andersson and contributors.
+
+SNU Appendard is not endorsed by the Pretendard or Inter authors. The names
+"Pretendard" and "Inter" are used only for attribution and source
+identification. They are not used as the family name of this derivative.
+
+License:
+
+The fonts are distributed under the SIL Open Font License, Version 1.1. See
+LICENSE for the full license text. Upstream copyright notices remain applicable
+to their respective portions of the derivative work.
