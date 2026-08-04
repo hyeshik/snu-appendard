@@ -17,7 +17,14 @@ if [ ! -d "$DIST_OTF_DIR" ]; then
     exit 1
 fi
 
-TMP_FONT_DIR="$(mktemp -d)"
+make_tmp_font_dir() {
+    local tmp_parent="${TMPDIR:-/tmp}"
+
+    mktemp -d "${tmp_parent%/}/snu-appendard-fonts.XXXXXX" 2>/dev/null ||
+        mktemp -d /tmp/snu-appendard-fonts.XXXXXX
+}
+
+TMP_FONT_DIR="$(make_tmp_font_dir)"
 trap 'rm -rf "$TMP_FONT_DIR"' EXIT
 
 find "$DIST_OTF_DIR" -name '*.otf' -type f -exec cp {} "$TMP_FONT_DIR/" \;

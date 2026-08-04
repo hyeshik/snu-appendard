@@ -72,6 +72,12 @@ Create the distribution ZIP:
 make dist
 ```
 
+Create and verify a GitHub release package:
+
+```sh
+make release
+```
+
 Run the unit tests:
 
 ```sh
@@ -115,6 +121,8 @@ All outputs use:
   after FontForge generation
 - `scripts/make_specimen.sh`: compiles `specimen/specimen.typ`
 - `scripts/package_dist.py`: creates the release ZIP
+- `scripts/package_release.py`: builds, verifies, checksums, and stages release
+  artifacts under `dist/`
 - `tests/`: pure helper tests that run without source font binaries
 
 ## Reproducibility Notes

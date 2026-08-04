@@ -14,7 +14,7 @@ from typing import Iterator, NamedTuple
 FAMILY_NAME = "SNU Appendard"
 POSTSCRIPT_FAMILY_NAME = "SNUAppendard"
 FILE_FAMILY_NAME = POSTSCRIPT_FAMILY_NAME
-VERSION = "001.000"
+VERSION = "001.001"
 VENDOR_ID = "HCHK"
 DEFAULT_OUTPUT_DIR = "dist/otf"
 TARGET_UPM = 1000
@@ -95,6 +95,19 @@ CJK_CODEPOINT_RANGES = (
     (0x30000, 0x3134F),
 )
 
+CJK_CONTEXT_SYMBOL_RANGES = (
+    (0x20D0, 0x20FF),  # enclosing combining marks
+    (0x2460, 0x24FF),  # enclosed alphanumerics
+    (0x2700, 0x27BF),  # dingbats, including circled digits
+    (0x1F100, 0x1F1FF),  # enclosed alphanumeric supplement
+)
+
+PRIVATE_USE_RANGES = (
+    (0xE000, 0xF8FF),
+    (0xF0000, 0xFFFFD),
+    (0x100000, 0x10FFFD),
+)
+
 
 @contextlib.contextmanager
 def suppress_c_stderr(enabled: bool) -> Iterator[None]:
@@ -168,8 +181,24 @@ def is_cjk_codepoint(codepoint: int) -> bool:
     return any(start <= codepoint <= end for start, end in CJK_CODEPOINT_RANGES)
 
 
+def is_cjk_context_symbol(codepoint: int) -> bool:
+    return any(start <= codepoint <= end for start, end in CJK_CONTEXT_SYMBOL_RANGES)
+
+
+def is_private_use_codepoint(codepoint: int) -> bool:
+    return any(start <= codepoint <= end for start, end in PRIVATE_USE_RANGES)
+
+
+def should_keep_pretendard_codepoint(codepoint: int) -> bool:
+    return (
+        is_cjk_codepoint(codepoint)
+        or is_cjk_context_symbol(codepoint)
+        or is_private_use_codepoint(codepoint)
+    )
+
+
 def should_replace_codepoint(codepoint: int) -> bool:
-    return codepoint >= 0 and not is_cjk_codepoint(codepoint)
+    return codepoint >= 0 and not should_keep_pretendard_codepoint(codepoint)
 
 
 def should_import_inter_glyphs(italic: bool) -> bool:

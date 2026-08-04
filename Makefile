@@ -1,7 +1,7 @@
 PYTHON ?= python3
 FONTFORGE ?= fontforge
 TYPST ?= typst
-VERSION ?= 0.1.0
+VERSION ?= 0.1.1
 BUILD_DIR ?= build
 SOURCE_DIR ?= sources
 DIST_DIR ?= dist
@@ -9,7 +9,7 @@ OTF_DIR ?= $(DIST_DIR)/otf
 MAPPING_REPORT ?= $(BUILD_DIR)/mapping_report.json
 PACKAGE_ZIP ?= $(DIST_DIR)/SNUAppendard-v$(VERSION).zip
 
-.PHONY: sources mapping build prototype specimen dist test clean distclean
+.PHONY: sources mapping build prototype specimen dist release test clean distclean
 
 sources:
 	scripts/download_sources.sh
@@ -64,6 +64,11 @@ dist: specimen
 		--include LICENSE \
 		--include NOTICE
 	test -f "$(PACKAGE_ZIP)"
+
+release:
+	$(PYTHON) scripts/package_release.py \
+		--version "$(VERSION)" \
+		--python "$(PYTHON)"
 
 test:
 	$(PYTHON) -m unittest discover -s tests

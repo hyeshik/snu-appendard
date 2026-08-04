@@ -54,6 +54,27 @@ class BuildAppendardContractTests(unittest.TestCase):
         self.assertFalse(builder.should_replace_codepoint(0x1100))
         self.assertFalse(builder.should_replace_codepoint(0x4E00))
         self.assertFalse(builder.should_replace_codepoint(0xF900))
+        self.assertFalse(builder.should_replace_codepoint(0x2460))
+        self.assertFalse(builder.should_replace_codepoint(0x24EA))
+        self.assertFalse(builder.should_replace_codepoint(0x2780))
+        self.assertFalse(builder.should_replace_codepoint(0x1F130))
+        self.assertFalse(builder.should_replace_codepoint(0x20DD))
+        self.assertFalse(builder.should_replace_codepoint(0xE000))
+
+    def test_cjk_context_symbols_are_preserved_as_pretendard_glyphs(self):
+        builder = load_module("build_appendard", "scripts/build_appendard.py")
+
+        preserved = {
+            0x20DD: "combining enclosing circle",
+            0x2460: "circled digit one",
+            0x24B6: "circled Latin capital A",
+            0x2780: "dingbat circled sans-serif digit one",
+            0x1F130: "squared Latin capital A",
+            0xE13E: "private-use glyph",
+        }
+        for codepoint, label in preserved.items():
+            with self.subTest(label=label):
+                self.assertTrue(builder.should_keep_pretendard_codepoint(codepoint))
 
     def test_regular_italic_uses_inter_filename_without_regular_prefix(self):
         builder = load_module("build_appendard", "scripts/build_appendard.py")
@@ -170,6 +191,13 @@ class MakefileContractTests(unittest.TestCase):
 
 
 class FixMetadataContractTests(unittest.TestCase):
+    def test_font_internal_versions_stay_aligned(self):
+        builder = load_module("build_appendard", "scripts/build_appendard.py")
+        fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
+
+        self.assertEqual(builder.VERSION, "001.001")
+        self.assertEqual(fixer.VERSION, "001.001")
+
     def test_regular_italic_metadata_uses_family_style_and_postscript_names(self):
         fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
 
@@ -184,7 +212,7 @@ class FixMetadataContractTests(unittest.TestCase):
         self.assertEqual(metadata.names[1], "SNU Appendard")
         self.assertEqual(metadata.names[2], "Italic")
         self.assertEqual(metadata.names[4], "SNU Appendard Italic")
-        self.assertEqual(metadata.names[5], "Version 001.000; Pretendard v1.3.9; Inter v3.19; build 20260509T000000Z")
+        self.assertEqual(metadata.names[5], "Version 001.001; Pretendard v1.3.9; Inter v3.19; build 20260509T000000Z")
         self.assertEqual(metadata.names[6], "SNUAppendard-Italic")
         self.assertEqual(metadata.names[16], "SNU Appendard")
         self.assertEqual(metadata.names[17], "Italic")
@@ -368,6 +396,32 @@ class PackageDistContractTests(unittest.TestCase):
             )
 
 
+class PackageReleaseContractTests(unittest.TestCase):
+    def test_release_asset_names_match_github_release_convention(self):
+        release = load_module("package_release", "scripts/package_release.py")
+
+        self.assertEqual(release.release_zip_name("0.1.1"), "SNUAppendard-v0.1.1.zip")
+        self.assertEqual(release.release_zip_name("v0.1.1"), "SNUAppendard-v0.1.1.zip")
+        self.assertEqual(
+            release.checksum_name("0.1.1"),
+            "SNUAppendard-v0.1.1.zip.sha256",
+        )
+        self.assertEqual(
+            release.release_note_name("0.1.1"),
+            "SNUAppendard-v0.1.1-release-notes.md",
+        )
+
+    def test_release_zip_layout_matches_previous_github_asset(self):
+        release = load_module("package_release", "scripts/package_release.py")
+        packager = load_module("package_dist", "scripts/package_dist.py")
+
+        self.assertEqual(
+            release.expected_release_entries(),
+            [f"otf/{name}" for name in packager.EXPECTED_OTF_FILENAMES]
+            + ["specimen.pdf", "README.md", "LICENSE", "NOTICE"],
+        )
+
+
 class DownloadScriptContractTests(unittest.TestCase):
     def test_download_script_cleanup_trap_is_safe_with_nounset(self):
         script = (ROOT / "scripts/download_sources.sh").read_text()
@@ -388,6 +442,13 @@ class SpecimenScriptContractTests(unittest.TestCase):
 
         self.assertIn("--ignore-system-fonts", script)
         self.assertIn("--font-path \"$TMP_FONT_DIR\"", script)
+
+    def test_specimen_tempdir_falls_back_when_default_tmp_is_restricted(self):
+        script = (ROOT / "scripts/make_specimen.sh").read_text()
+
+        self.assertIn("make_tmp_font_dir", script)
+        self.assertIn("snu-appendard-fonts.XXXXXX", script)
+        self.assertIn("mktemp -d /tmp/snu-appendard-fonts.XXXXXX", script)
 
 
 if __name__ == "__main__":
