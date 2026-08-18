@@ -12,7 +12,7 @@ from fontTools.ttLib import TTFont
 
 FAMILY_NAME = "SNU Appendard"
 POSTSCRIPT_FAMILY_NAME = "SNUAppendard"
-VERSION = "001.001"
+VERSION = "0.2.0"
 VENDOR_ID = "HCHK"
 DEFAULT_ITALIC_ANGLE = -10.0
 TARGET_UPM = 1000
@@ -276,6 +276,30 @@ def replace_name_records(font: TTFont, metadata: FontMetadata) -> None:
         name_table.setName(value, name_id, 1, 0, 0)
 
 
+def font_revision(version: str = VERSION) -> float:
+    """``head.fontRevision`` for our dotted version string.
+
+    FontForge leaves Pretendard's own revision in the generated ``head`` table,
+    so a build would otherwise report itself as Pretendard's 1.309 no matter what
+    the name records say. Minor and patch become decimal places, matching what
+    FontForge writes for the sibling families: ``0.2.0`` is ``0.2`` and ``0.2.1``
+    is ``0.201``. That mapping only stays unambiguous while minor stays below 10
+    and patch below 100, so it refuses anything larger rather than silently
+    shipping a revision that collides with another release.
+    """
+    parts = version.split(".")
+    if len(parts) not in (2, 3):
+        raise ValueError(f"Expected a major.minor[.patch] version: {version}")
+    major, minor = int(parts[0]), int(parts[1])
+    patch = int(parts[2]) if len(parts) == 3 else 0
+    if not 0 <= minor < 10 or not 0 <= patch < 100:
+        raise ValueError(
+            f"Version {version} cannot be mapped to a unique head.fontRevision; "
+            "pick a wider encoding before releasing it."
+        )
+    return round(major + minor / 10 + patch / 1000, 6)
+
+
 def caret_slope_run(italic_angle: float, rise: int = TARGET_UPM) -> int:
     if italic_angle == 0:
         return 0
@@ -294,6 +318,7 @@ def normalize_style_tables(font: TTFont, metadata: FontMetadata) -> None:
 
     if "head" in font:
         head_table = font["head"]
+        head_table.fontRevision = font_revision()
         head_table.macStyle = (
             head_table.macStyle & ~(0x01 | 0x02)
         ) | mac_style(metadata.weight_class, metadata.italic)

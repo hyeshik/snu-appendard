@@ -1,13 +1,14 @@
 PYTHON ?= python3
 FONTFORGE ?= fontforge
 TYPST ?= typst
-VERSION ?= 0.1.1
+VERSION ?= 0.2.0
 BUILD_DIR ?= build
 SOURCE_DIR ?= sources
 DIST_DIR ?= dist
 OTF_DIR ?= $(DIST_DIR)/otf
 MAPPING_REPORT ?= $(BUILD_DIR)/mapping_report.json
-PACKAGE_ZIP ?= $(DIST_DIR)/SNUAppendard-v$(VERSION).zip
+GUARD_CLEARANCE ?= 30
+PACKAGE_ZIP ?= $(DIST_DIR)/SNUAppendard-$(VERSION).zip
 
 .PHONY: sources mapping build prototype specimen dist release test clean distclean
 
@@ -36,6 +37,10 @@ prototype: mapping
 		--font "$(BUILD_DIR)/SNUAppendard-Italic.otf" \
 		--pretendard-dir "$(SOURCE_DIR)/pretendard" \
 		--versions-lock versions.lock
+	$(PYTHON) scripts/add_italic_cjk_guard.py \
+		--font "$(BUILD_DIR)/SNUAppendard-Regular.otf" \
+		--font "$(BUILD_DIR)/SNUAppendard-Italic.otf" \
+		--clearance "$(GUARD_CLEARANCE)"
 
 build: mapping
 	rm -rf "$(OTF_DIR)"
@@ -50,6 +55,9 @@ build: mapping
 		--input-dir "$(OTF_DIR)" \
 		--pretendard-dir "$(SOURCE_DIR)/pretendard" \
 		--versions-lock versions.lock
+	$(PYTHON) scripts/add_italic_cjk_guard.py \
+		--input-dir "$(OTF_DIR)" \
+		--clearance "$(GUARD_CLEARANCE)"
 
 specimen: build
 	scripts/make_specimen.sh

@@ -33,8 +33,8 @@ EXPECTED_OTF_FILENAMES = [f"{FAMILY_PREFIX}-{style}.otf" for style in STYLE_NAME
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Package SNU Appendard release files.")
     parser.add_argument("--input-dir", default="dist/otf")
-    parser.add_argument("--output", default="dist/SNUAppendard-v0.1.1.zip")
-    parser.add_argument("--version", default="0.1.1")
+    parser.add_argument("--output", default="dist/SNUAppendard-0.2.0.zip")
+    parser.add_argument("--version", default="0.2.0")
     parser.add_argument(
         "--include",
         action="append",

@@ -1,17 +1,27 @@
 import importlib.util
 import pathlib
+import sys
 import tempfile
+import types
 import unittest
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+SCRIPTS = str(ROOT / "scripts")
 
 
 def load_module(name, path):
-    spec = importlib.util.spec_from_file_location(name, ROOT / path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    # Scripts import each other by bare module name, which works because
+    # FontForge and python3 both put the script's own directory first on
+    # sys.path. Reproduce that here.
+    sys.path.insert(0, SCRIPTS)
+    try:
+        spec = importlib.util.spec_from_file_location(name, ROOT / path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    finally:
+        sys.path.remove(SCRIPTS)
 
 
 class BuildAppendardContractTests(unittest.TestCase):
@@ -183,6 +193,18 @@ class MakefileContractTests(unittest.TestCase):
         self.assertIn("scripts/fix_metadata.py", makefile)
         self.assertIn("--pretendard-dir", makefile)
 
+    def test_build_guards_italic_glyphs_against_upright_cjk(self):
+        makefile = (ROOT / "Makefile").read_text()
+
+        self.assertIn("scripts/add_italic_cjk_guard.py", makefile)
+        self.assertIn("GUARD_CLEARANCE ?= 30", makefile)
+        # The guard reads the final metrics, so it has to run after FontForge
+        # generation and after metadata normalization.
+        self.assertLess(
+            makefile.index("scripts/fix_metadata.py"),
+            makefile.index("scripts/add_italic_cjk_guard.py"),
+        )
+
     def test_prototype_uses_font_discovery_for_nested_source_layouts(self):
         makefile = (ROOT / "Makefile").read_text()
 
@@ -190,13 +212,211 @@ class MakefileContractTests(unittest.TestCase):
         self.assertNotIn("$(SOURCE_DIR)/inter/Inter-Regular.ttf", makefile)
 
 
+class ItalicCjkGuardContractTests(unittest.TestCase):
+    def test_geometry_buckets_round_toward_more_clearance(self):
+        guard = load_module("add_italic_cjk_guard", "scripts/add_italic_cjk_guard.py")
+
+        self.assertEqual(guard.round_up(42, 5), 45)
+        self.assertEqual(guard.round_up(-3, 5), 0)
+        self.assertEqual(guard.round_down(22, 5), 20)
+        self.assertEqual(guard.round_down(-3, 5), -5)
+
+    def test_pairs_that_already_clear_keep_their_designed_spacing(self):
+        guard = load_module("add_italic_cjk_guard", "scripts/add_italic_cjk_guard.py")
+
+        self.assertEqual(guard.guard_units(overhang=-15, side_bearing=73), 0)
+        self.assertEqual(guard.guard_units(overhang=43, side_bearing=73), 0)
+
+    def test_colliding_pairs_get_a_bucket_rounded_guard(self):
+        guard = load_module("add_italic_cjk_guard", "scripts/add_italic_cjk_guard.py")
+
+        # Forward, 'f가': 61 unit overhang against a 41 unit side bearing.
+        self.assertEqual(guard.guard_units(overhang=65, side_bearing=40), 55)
+        # Reverse, '다f': 80 unit overhang against an 11 unit side bearing.
+        self.assertEqual(guard.guard_units(overhang=80, side_bearing=10), 100)
+
+    def test_guard_keeps_clearance_for_every_member_of_a_bucket(self):
+        guard = load_module("add_italic_cjk_guard", "scripts/add_italic_cjk_guard.py")
+        clearance = 30
+        bucket = 5
+
+        for real_overhang in (61.0, 63.4, 64.9):
+            for real_side_bearing in (41.0, 43.0, 44.9):
+                units = guard.guard_units(
+                    overhang=guard.round_up(real_overhang, bucket),
+                    side_bearing=guard.round_down(real_side_bearing, bucket),
+                    clearance=clearance,
+                    bucket_size=bucket,
+                )
+                gap = real_side_bearing - real_overhang + units
+                self.assertGreaterEqual(gap, clearance)
+
+    def test_marks_and_zero_advance_glyphs_are_left_alone(self):
+        guard = load_module("add_italic_cjk_guard", "scripts/add_italic_cjk_guard.py")
+
+        # Inter contributes hundreds of zero-advance combining marks. Kerning
+        # them would push the next glyph away by the mark's bounding box.
+        self.assertFalse(guard.participates_in_spacing({0x0301}, 0))
+        self.assertFalse(guard.participates_in_spacing({0x0308}, 0))
+        self.assertFalse(guard.participates_in_spacing({0x20DC}, 0))
+        self.assertTrue(guard.participates_in_spacing({ord("f")}, 354))
+        self.assertTrue(guard.participates_in_spacing({ord("다")}, 864))
+
+    def test_guard_sides_follow_the_source_split_and_skip_private_use(self):
+        guard = load_module("add_italic_cjk_guard", "scripts/add_italic_cjk_guard.py")
+
+        self.assertIs(guard.guard_side({ord("다")}), True)
+        self.assertIs(guard.guard_side({ord("한")}), True)
+        self.assertIs(guard.guard_side({0x3042}), True)
+        self.assertIs(guard.guard_side({0x2460}), True)
+        self.assertIs(guard.guard_side({ord("f")}), False)
+        self.assertIs(guard.guard_side({ord("7")}), False)
+        # Pretendard keeps private-use glyphs for its own composition
+        # machinery; they are not CJK text and their advances do not describe
+        # spacing, so they take no part in the guard.
+        self.assertIsNone(guard.guard_side({0xE105}))
+        self.assertIsNone(guard.guard_side({0xF8FF}))
+        # Ambiguous glyphs reachable from both sides are left alone.
+        self.assertIsNone(guard.guard_side({ord("f"), ord("다")}))
+
+    def test_guard_ignores_marks_like_the_upstream_kern_lookups(self):
+        guard = load_module("add_italic_cjk_guard", "scripts/add_italic_cjk_guard.py")
+
+        # Pretendard and Inter both ship kern lookups with IgnoreMarks set. The
+        # guard matches them so a combining mark between a letter and a CJK
+        # glyph cannot hide the pair from the lookup.
+        self.assertEqual(guard.IGNORE_MARKS_FLAG, 0x08)
+
+    def test_guard_absorbs_the_kerning_the_sources_already_apply(self):
+        guard = load_module("add_italic_cjk_guard", "scripts/add_italic_cjk_guard.py")
+
+        # Lookups in one feature accumulate, so upstream kerning eats into the
+        # guard. Pretendard and Inter kern tens of thousands of cross-script
+        # pairs, often negatively, and the guard has to make that back.
+        self.assertEqual(
+            guard.guard_units(overhang=125, side_bearing=5, existing_adjustment=0),
+            150,
+        )
+        self.assertEqual(
+            guard.guard_units(overhang=125, side_bearing=5, existing_adjustment=-61),
+            215,
+        )
+        # Upstream kerning that already opens the pair needs less from us.
+        self.assertEqual(
+            guard.guard_units(overhang=125, side_bearing=5, existing_adjustment=60),
+            90,
+        )
+        self.assertEqual(
+            guard.guard_units(overhang=65, side_bearing=40, existing_adjustment=100),
+            0,
+        )
+
+    def test_pair_value_records_are_read_as_gap_changes(self):
+        guard = load_module("add_italic_cjk_guard", "scripts/add_italic_cjk_guard.py")
+        record = types.SimpleNamespace
+
+        self.assertEqual(guard.gap_delta(record(XAdvance=-40), None), -40)
+        # Displacing the first glyph right closes the gap; displacing the second
+        # one right opens it. The second glyph's advance belongs to the next pair.
+        self.assertEqual(guard.gap_delta(record(XPlacement=15), None), -15)
+        self.assertEqual(guard.gap_delta(None, record(XPlacement=15)), 15)
+        self.assertEqual(guard.gap_delta(None, record(XAdvance=99)), 0)
+        self.assertEqual(guard.gap_delta(None, None), 0)
+
+    def test_each_class_cell_is_sized_for_its_least_favourable_member(self):
+        guard = load_module("add_italic_cjk_guard", "scripts/add_italic_cjk_guard.py")
+
+        adjustments = {("f", "ga"): -20, ("f", "na"): -61, ("j", "ga"): 40}
+        worst = guard.worst_adjustment_per_cell(
+            adjustments,
+            {"f": 65, "j": 65},
+            {"ga": 40, "na": 40},
+            {(65, 40): 4},
+        )
+        # Both f pairs and both j pairs land in the one cell, so it must assume
+        # the -61 rather than averaging it away.
+        self.assertEqual(worst[(65, 40)], -61)
+
+    def test_a_cell_with_an_unkerned_member_cannot_assume_upstream_help(self):
+        guard = load_module("add_italic_cjk_guard", "scripts/add_italic_cjk_guard.py")
+
+        # Only one of the cell's four pairs is kerned, and positively. The other
+        # three get nothing from upstream, so the cell must plan for zero.
+        worst = guard.worst_adjustment_per_cell(
+            {("f", "ga"): 40}, {"f": 65, "j": 65}, {"ga": 40, "na": 40}, {(65, 40): 4}
+        )
+        self.assertEqual(worst[(65, 40)], 0)
+
+        # When every pair in the cell is kerned by the same positive amount,
+        # that help is real and the guard can count on it.
+        worst = guard.worst_adjustment_per_cell(
+            {("f", "ga"): 40}, {"f": 65}, {"ga": 40}, {(65, 40): 1}
+        )
+        self.assertEqual(worst[(65, 40)], 40)
+
+    def test_a_previous_guard_is_recognized_so_reruns_do_not_stack(self):
+        guard = load_module("add_italic_cjk_guard", "scripts/add_italic_cjk_guard.py")
+
+        def font_with(lookups, kern_indices):
+            return {
+                "GPOS": types.SimpleNamespace(
+                    table=types.SimpleNamespace(
+                        LookupList=types.SimpleNamespace(Lookup=lookups),
+                        FeatureList=types.SimpleNamespace(
+                            FeatureRecord=[
+                                types.SimpleNamespace(
+                                    FeatureTag="kern",
+                                    Feature=types.SimpleNamespace(
+                                        LookupListIndex=kern_indices
+                                    ),
+                                )
+                            ]
+                        ),
+                    )
+                )
+            }
+
+        classes = types.SimpleNamespace(Format=2)
+        ours = types.SimpleNamespace(
+            LookupType=2, LookupFlag=guard.IGNORE_MARKS_FLAG, SubTable=[classes, classes]
+        )
+        upstream = types.SimpleNamespace(LookupType=2, LookupFlag=0, SubTable=[classes])
+
+        self.assertEqual(guard.find_existing_guard(font_with([upstream, ours], [0, 1])), 1)
+        # Not ours: unflagged, not last in the kern feature, or not in it at all.
+        self.assertIsNone(guard.find_existing_guard(font_with([upstream, upstream], [0, 1])))
+        self.assertIsNone(guard.find_existing_guard(font_with([upstream, ours], [1, 0])))
+        self.assertIsNone(guard.find_existing_guard(font_with([ours, upstream], [0])))
+
+    def test_defaults_match_the_documented_build_settings(self):
+        guard = load_module("add_italic_cjk_guard", "scripts/add_italic_cjk_guard.py")
+
+        self.assertEqual(guard.DEFAULT_CLEARANCE, 30)
+        self.assertEqual(guard.DEFAULT_BUCKET_SIZE, 5)
+
+
 class FixMetadataContractTests(unittest.TestCase):
     def test_font_internal_versions_stay_aligned(self):
         builder = load_module("build_appendard", "scripts/build_appendard.py")
         fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
 
-        self.assertEqual(builder.VERSION, "001.001")
-        self.assertEqual(fixer.VERSION, "001.001")
+        self.assertEqual(builder.VERSION, "0.2.0")
+        self.assertEqual(fixer.VERSION, "0.2.0")
+
+    def test_head_revision_reports_our_version_not_pretendards(self):
+        fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
+
+        # FontForge leaves Pretendard's 1.309 in the generated head table, so
+        # this has to be written explicitly or the font reports the wrong
+        # version to anything that reads head rather than the name records.
+        self.assertEqual(fixer.font_revision("0.2.0"), 0.2)
+        self.assertEqual(fixer.font_revision("0.2.1"), 0.201)
+        self.assertEqual(fixer.font_revision("1.0"), 1.0)
+        self.assertEqual(fixer.font_revision(), fixer.font_revision(fixer.VERSION))
+        # Refuse encodings that would collide with another release.
+        for ambiguous in ("0.10.0", "0.2.100", "0"):
+            with self.assertRaises(ValueError):
+                fixer.font_revision(ambiguous)
 
     def test_regular_italic_metadata_uses_family_style_and_postscript_names(self):
         fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
@@ -212,7 +432,7 @@ class FixMetadataContractTests(unittest.TestCase):
         self.assertEqual(metadata.names[1], "SNU Appendard")
         self.assertEqual(metadata.names[2], "Italic")
         self.assertEqual(metadata.names[4], "SNU Appendard Italic")
-        self.assertEqual(metadata.names[5], "Version 001.001; Pretendard v1.3.9; Inter v3.19; build 20260509T000000Z")
+        self.assertEqual(metadata.names[5], "Version 0.2.0; Pretendard v1.3.9; Inter v3.19; build 20260509T000000Z")
         self.assertEqual(metadata.names[6], "SNUAppendard-Italic")
         self.assertEqual(metadata.names[16], "SNU Appendard")
         self.assertEqual(metadata.names[17], "Italic")
@@ -400,15 +620,16 @@ class PackageReleaseContractTests(unittest.TestCase):
     def test_release_asset_names_match_github_release_convention(self):
         release = load_module("package_release", "scripts/package_release.py")
 
-        self.assertEqual(release.release_zip_name("0.1.1"), "SNUAppendard-v0.1.1.zip")
-        self.assertEqual(release.release_zip_name("v0.1.1"), "SNUAppendard-v0.1.1.zip")
+        self.assertEqual(release.release_zip_name("0.2.0"), "SNUAppendard-0.2.0.zip")
+        # A tag-style "v0.2.0" names the same asset as a bare "0.2.0".
+        self.assertEqual(release.release_zip_name("v0.2.0"), "SNUAppendard-0.2.0.zip")
         self.assertEqual(
-            release.checksum_name("0.1.1"),
-            "SNUAppendard-v0.1.1.zip.sha256",
+            release.checksum_name("0.2.0"),
+            "SNUAppendard-0.2.0.zip.sha256",
         )
         self.assertEqual(
-            release.release_note_name("0.1.1"),
-            "SNUAppendard-v0.1.1-release-notes.md",
+            release.release_note_name("0.2.0"),
+            "SNUAppendard-0.2.0-release-notes.md",
         )
 
     def test_release_zip_layout_matches_previous_github_asset(self):

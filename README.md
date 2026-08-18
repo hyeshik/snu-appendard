@@ -2,7 +2,9 @@
 
 SNU Appendard is a Pretendard-derived OpenType/CFF build that keeps Hangul and
 CJK glyphs from Pretendard, imports Inter non-CJK outlines for both upright and
-italic styles, and adds true Inter italic forms. Upright styles preserve
+italic styles, and adds true Inter italic forms. Italic styles carry a kerning
+guard that keeps sloped letters from colliding with the upright CJK glyphs
+around them. Upright styles preserve
 Pretendard's advance widths and left sidebearings so spacing stays compatible.
 The OTF outputs are generated at UPM 1000 to avoid HP PostScript/PCL interpreters that
 incorrectly assume all CFF fonts use 1000 units per em.
@@ -119,11 +121,77 @@ All outputs use:
   glyphs from Pretendard, scales to UPM 1000, and emits OTFs
 - `scripts/fix_metadata.py`: normalizes OpenType name records and style bits
   after FontForge generation
+- `scripts/add_italic_cjk_guard.py`: adds the italic-to-upright-CJK collision
+  guard to the italic OTFs
 - `scripts/make_specimen.sh`: compiles `specimen/specimen.typ`
 - `scripts/package_dist.py`: creates the release ZIP
 - `scripts/package_release.py`: builds, verifies, checksums, and stages release
   artifacts under `dist/`
 - `tests/`: pure helper tests that run without source font binaries
+
+## Italic CJK Collision Guard
+
+Italic styles mix sloped Inter outlines with upright Pretendard CJK glyphs. Inter
+Italic carries ink outside the advance on both sides of a letter, so a letter
+placed directly against an upright glyph can overlap it. Both orders collide,
+and both are specific to the italics: the same pairs clear in the upright
+styles.
+
+| pair | upright | italic, unguarded | italic, guarded |
+| ---- | ------- | ----------------- | --------------- |
+| `f가` | +32 | -20 | +35 |
+| `f파` | +15 | -37 | +38 |
+| `다f` | +29 | -69 | +31 |
+| `다j` | -10 | -76 | +34 |
+
+`make build` therefore runs `scripts/add_italic_cjk_guard.py` over the generated
+OTFs. It buckets the italic glyphs by how far their ink passes the advance and
+the upright glyphs by their side bearings, then adds a class-based GPOS pair
+positioning lookup to each `kern` feature that widens only the colliding pairs.
+Upright fonts are skipped.
+
+Because lookups in one feature accumulate rather than override, the guard also
+has to account for the kerning the sources already apply. Pretendard and Inter
+kern roughly 38,000 of these cross-script pairs, most of them negatively, so a
+guard sized from outlines alone gets partly cancelled: `Ὺ》` needs 150 units but
+nets only 89 once upstream kerning has taken its 61 back. The existing
+adjustment for every cross-script pair is therefore read out of the font and
+folded into the requirement, and each class cell is sized for its least
+favourable member.
+
+Properties worth knowing:
+
+- The guard is kerning, so it inserts no space glyph and creates no line-break
+  opportunity.
+- Pairs that already keep the clearance are untouched, as is Latin-internal
+  kerning.
+- Re-running the script replaces its own previous lookup instead of stacking a
+  second one, so it is safe to apply repeatedly.
+- The lookup sets `IgnoreMarks`, matching the kern lookups Pretendard and Inter
+  already ship, so a combining mark between a letter and a CJK glyph does not
+  hide the pair.
+- Combining marks and other zero-advance glyphs take no part in the guard. They
+  are positioned by mark attachment, and adding advance to them would displace
+  the following glyph by the mark's whole bounding box.
+- Pretendard's private-use glyphs are skipped as well. They are not CJK text and
+  several draw a full-width form behind an advance of one or two units, so their
+  metrics do not describe spacing.
+- Clearance is measured from bounding boxes rather than per-outline ink, so a few
+  pairs whose ink never overlaps vertically are widened too.
+- Guard classes are geometry buckets, not exact per-pair values. Where one cell
+  mixes pairs with different upstream kerning, the cell follows its worst member,
+  so a few pairs end up slightly wider than the clearance strictly requires.
+  Splitting classes finely enough to avoid that would multiply the class matrix
+  beyond a usable size.
+
+Change the target clearance, in font units at UPM 1000, with:
+
+```sh
+make build GUARD_CLEARANCE=40
+```
+
+Applications that shape Latin and CJK as separate runs may still need an
+equivalent typesetting boundary rule, because the pair never reaches the shaper.
 
 ## Reproducibility Notes
 

@@ -17,7 +17,7 @@ if str(SCRIPT_DIR) not in sys.path:
 from package_dist import EXPECTED_OTF_FILENAMES
 
 
-DEFAULT_VERSION = "0.1.1"
+DEFAULT_VERSION = "0.2.0"
 RELEASE_ROOT_FILES = ("specimen.pdf", "README.md", "LICENSE", "NOTICE")
 
 
@@ -29,11 +29,11 @@ def normalize_version(version: str) -> str:
 
 
 def release_zip_name(version: str) -> str:
-    return f"SNUAppendard-v{normalize_version(version)}.zip"
+    return f"SNUAppendard-{normalize_version(version)}.zip"
 
 
 def release_note_name(version: str) -> str:
-    return f"SNUAppendard-v{normalize_version(version)}-release-notes.md"
+    return f"SNUAppendard-{normalize_version(version)}-release-notes.md"
 
 
 def checksum_name(version: str) -> str:
