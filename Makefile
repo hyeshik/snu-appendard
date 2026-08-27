@@ -1,7 +1,7 @@
 PYTHON ?= python3
 FONTFORGE ?= fontforge
 TYPST ?= typst
-VERSION ?= 0.2.0
+VERSION ?= $(shell sed -n 's/^VERSION = "\(.*\)"$$/\1/p' scripts/build_appendard.py)
 BUILD_DIR ?= build
 SOURCE_DIR ?= sources
 DIST_DIR ?= dist
@@ -10,7 +10,7 @@ MAPPING_REPORT ?= $(BUILD_DIR)/mapping_report.json
 GUARD_CLEARANCE ?= 30
 PACKAGE_ZIP ?= $(DIST_DIR)/SNUAppendard-$(VERSION).zip
 
-.PHONY: sources mapping build prototype specimen dist release test clean distclean
+.PHONY: sources mapping build prototype specimen distribution release test clean distclean
 
 sources:
 	scripts/download_sources.sh
@@ -31,15 +31,15 @@ prototype: mapping
 		--transform "$(MAPPING_REPORT)" \
 		--weight Regular \
 		--output "$(BUILD_DIR)/SNUAppendard-Regular.otf" \
-		--output-italic "$(BUILD_DIR)/SNUAppendard-Italic.otf"
+		--output-italic "$(BUILD_DIR)/SNUAppendard-RegularItalic.otf"
 	$(PYTHON) scripts/fix_metadata.py \
 		--font "$(BUILD_DIR)/SNUAppendard-Regular.otf" \
-		--font "$(BUILD_DIR)/SNUAppendard-Italic.otf" \
+		--font "$(BUILD_DIR)/SNUAppendard-RegularItalic.otf" \
 		--pretendard-dir "$(SOURCE_DIR)/pretendard" \
 		--versions-lock versions.lock
 	$(PYTHON) scripts/add_italic_cjk_guard.py \
 		--font "$(BUILD_DIR)/SNUAppendard-Regular.otf" \
-		--font "$(BUILD_DIR)/SNUAppendard-Italic.otf" \
+		--font "$(BUILD_DIR)/SNUAppendard-RegularItalic.otf" \
 		--clearance "$(GUARD_CLEARANCE)"
 
 build: mapping
@@ -62,15 +62,10 @@ build: mapping
 specimen: build
 	scripts/make_specimen.sh
 
-dist: specimen
-	$(PYTHON) scripts/package_dist.py \
+distribution: build
+	$(PYTHON) scripts/package_distribution.py \
 		--input-dir "$(OTF_DIR)" \
-		--output "$(PACKAGE_ZIP)" \
-		--version "$(VERSION)" \
-		--include specimen/specimen.pdf \
-		--include README.md \
-		--include LICENSE \
-		--include NOTICE
+		--output "$(PACKAGE_ZIP)"
 	test -f "$(PACKAGE_ZIP)"
 
 release:

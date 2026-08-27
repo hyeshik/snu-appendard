@@ -12,7 +12,7 @@ from fontTools.ttLib import TTFont
 
 FAMILY_NAME = "SNU Appendard"
 POSTSCRIPT_FAMILY_NAME = "SNUAppendard"
-VERSION = "0.2.0"
+VERSION = "0.6.0"
 VENDOR_ID = "HCHK"
 DEFAULT_ITALIC_ANGLE = -10.0
 TARGET_UPM = 1000
@@ -113,9 +113,6 @@ def parse_output_filename(filename: str | Path) -> tuple[str, bool]:
         raise ValueError(f"Expected filename prefix {prefix}: {path.name}")
 
     style_token = path.stem.removeprefix(prefix)
-    if style_token == "Italic":
-        return "Regular", True
-
     italic = style_token.endswith("Italic")
     style = style_token[: -len("Italic")] if italic else style_token
     if style not in WEIGHT_CLASSES:
@@ -132,6 +129,8 @@ def style_name(style: str, italic: bool) -> str:
 
 
 def postscript_style_name(style: str, italic: bool) -> str:
+    if italic and style == "Regular":
+        return "RegularItalic"
     return style_name(style, italic).replace(" ", "")
 
 
@@ -228,10 +227,6 @@ def metadata_for_filename(
     ps_name = f"{POSTSCRIPT_FAMILY_NAME}-{postscript_style_name(style, italic)}"
     full_name = f"{FAMILY_NAME} {output_style}"
     stamp = build_stamp or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    upstream = "Pretendard {pret}; Inter {inter}".format(
-        pret=versions.get("PRETENDARD_TAG", "unknown"),
-        inter=versions.get("INTER_TAG", "unknown"),
-    )
     copyright_text = (
         "Copyright (c) Hyung-jin Kil and Pretendard contributors; "
         "Copyright (c) Rasmus Andersson and Inter contributors; "
@@ -252,7 +247,7 @@ def metadata_for_filename(
             2: output_style,
             3: f"{VERSION};{VENDOR_ID};{ps_name};{stamp}",
             4: full_name,
-            5: f"Version {VERSION}; {upstream}; build {stamp}",
+            5: f"Version {VERSION}",
             6: ps_name,
             7: notice,
             8: "Hyeshik Chang",
@@ -338,6 +333,15 @@ def normalize_style_tables(font: TTFont, metadata: FontMetadata) -> None:
         hhea_table.caretSlopeRun = caret_slope_run(italic_angle)
 
 
+def normalize_cff_version(font: TTFont) -> None:
+    if "CFF " not in font:
+        return
+    top_dict = font["CFF "].cff.topDictIndex[0]
+    top_dict.version = VERSION
+    if hasattr(top_dict, "CIDFontVersion"):
+        top_dict.CIDFontVersion = font_revision()
+
+
 def normalize_vertical_metrics(font: TTFont, metrics: VerticalMetrics) -> None:
     if "hhea" in font:
         hhea_table = font["hhea"]
@@ -386,6 +390,7 @@ def apply_metadata(path: Path, versions: dict[str, str], pretendard_dir: Path | 
     try:
         replace_name_records(font, metadata)
         normalize_style_tables(font, metadata)
+        normalize_cff_version(font)
         if pretendard_dir is not None:
             source_path = find_font_file(pretendard_dir, f"Pretendard-{metadata.style}")
             normalize_vertical_metrics(

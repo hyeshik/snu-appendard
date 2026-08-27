@@ -14,7 +14,7 @@ from typing import Iterator, NamedTuple
 FAMILY_NAME = "SNU Appendard"
 POSTSCRIPT_FAMILY_NAME = "SNUAppendard"
 FILE_FAMILY_NAME = POSTSCRIPT_FAMILY_NAME
-VERSION = "0.2.0"
+VERSION = "0.6.0"
 VENDOR_ID = "HCHK"
 DEFAULT_OUTPUT_DIR = "dist/otf"
 TARGET_UPM = 1000
@@ -141,7 +141,7 @@ def typographic_style_name(style: str, italic: bool) -> str:
 
 
 def postscript_style_name(style: str, italic: bool) -> str:
-    return style_name(style, italic).replace(" ", "")
+    return typographic_style_name(style, italic).replace(" ", "")
 
 
 def output_filename(style: str, italic: bool) -> str:
@@ -380,10 +380,6 @@ def rewrite_metadata(
     ps_name = f"{POSTSCRIPT_FAMILY_NAME}-{postscript_style_name(spec.style, italic)}"
     full_name = f"{FAMILY_NAME} {output_style}"
     build_stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    upstream = "Pretendard {pret}; Inter {inter}".format(
-        pret=versions.get("PRETENDARD_TAG", "unknown"),
-        inter=versions.get("INTER_TAG", "unknown"),
-    )
     copyright_text = (
         "Copyright (c) Hyung-jin Kil and Pretendard contributors; "
         "Copyright (c) Rasmus Andersson and Inter contributors; "
@@ -417,7 +413,7 @@ def rewrite_metadata(
         ("English (US)", "SubFamily", output_style),
         ("English (US)", "UniqueID", f"{VERSION};{VENDOR_ID};{ps_name};{build_stamp}"),
         ("English (US)", "Fullname", full_name),
-        ("English (US)", "Version", f"Version {VERSION}; {upstream}; build {build_stamp}"),
+        ("English (US)", "Version", f"Version {VERSION}"),
         ("English (US)", "PostScriptName", ps_name),
         ("English (US)", "Trademark", notice),
         ("English (US)", "Manufacturer", "Hyeshik Chang"),

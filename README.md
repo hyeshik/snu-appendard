@@ -71,8 +71,12 @@ make specimen
 Create the distribution ZIP:
 
 ```sh
-make dist
+make distribution
 ```
+
+The ZIP has no wrapper directory. Its root contains only the 18 OTF files,
+`LICENSE.txt`, `LICENSE-Inter.txt`, and `LICENSE-Pretendard.txt`; the specimen,
+README, release notes, and other project files are not distributed.
 
 Create and verify a GitHub release package:
 
@@ -99,13 +103,14 @@ The default build writes 18 files to `dist/otf/`:
 
 - Upright: Thin, ExtraLight, Light, Regular, Medium, SemiBold, Bold,
   ExtraBold, Black
-- Italic: ThinItalic, ExtraLightItalic, LightItalic, Italic, MediumItalic,
+- Italic: ThinItalic, ExtraLightItalic, LightItalic, RegularItalic, MediumItalic,
   SemiBoldItalic, BoldItalic, ExtraBoldItalic, BlackItalic
 
 All outputs use:
 
 - Family name: `SNU Appendard`
 - File and PostScript prefix: `SNUAppendard`
+- Version name: `0.6.0` (`head.fontRevision == 0.6`)
 - OpenType/CFF outlines
 - `head.unitsPerEm == 1000`
 
@@ -124,7 +129,7 @@ All outputs use:
 - `scripts/add_italic_cjk_guard.py`: adds the italic-to-upright-CJK collision
   guard to the italic OTFs
 - `scripts/make_specimen.sh`: compiles `specimen/specimen.typ`
-- `scripts/package_dist.py`: creates the release ZIP
+- `scripts/package_distribution.py`: creates the flat OTF-and-license release ZIP
 - `scripts/package_release.py`: builds, verifies, checksums, and stages release
   artifacts under `dist/`
 - `tests/`: pure helper tests that run without source font binaries

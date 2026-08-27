@@ -29,15 +29,13 @@ jobs:
         run: make test
 
       - name: Build distribution
-        run: make distclean && make sources && make build && make specimen && make dist
+        run: make distclean && make sources && make distribution
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: snu-appendard
-          path: |
-            dist/*.zip
-            specimen/specimen.pdf
+          path: dist/*.zip
 
       - name: Resolve release title
         if: startsWith(github.ref, 'refs/tags/v')

@@ -1,4 +1,4 @@
-# SNU Appendard v0.2.0
+# SNU Appendard v0.6.0
 
 Spacing release of SNU Appendard — a Pretendard-derived OpenType/CFF font family that pairs Pretendard's Hangul and CJK glyphs with Inter's Latin outlines, including true Inter italic forms.
 
@@ -14,16 +14,17 @@ Spacing release of SNU Appendard — a Pretendard-derived OpenType/CFF font fami
 
 ## What's in the build
 
-The release ZIP is `SNUAppendard-0.2.0.zip` and contains 18 static OTF files under `otf/`:
+The release ZIP is `SNUAppendard-0.6.0.zip`. Its root contains 18 static OTF
+files and the SNU Appendard, Inter, and Pretendard license texts:
 
 - **Upright**: Thin, ExtraLight, Light, Regular, Medium, SemiBold, Bold, ExtraBold, Black
-- **Italic**: ThinItalic, ExtraLightItalic, LightItalic, Italic, MediumItalic, SemiBoldItalic, BoldItalic, ExtraBoldItalic, BlackItalic
+- **Italic**: ThinItalic, ExtraLightItalic, LightItalic, RegularItalic, MediumItalic, SemiBoldItalic, BoldItalic, ExtraBoldItalic, BlackItalic
 
 TTF and variable builds are intentionally deferred for this iteration.
 
-The internal font version is now `0.2.0`, matching the release version. Note that
-the asset name drops the `v` prefix used by `v0.1.0` and `v0.1.1`: the file is
-`SNUAppendard-0.2.0.zip`, while the git tag remains `v0.2.0`.
+Every font reports `Version 0.6.0` in OpenType name ID 5 and `0.6` in the
+numeric `head.fontRevision` field. The release file is
+`SNUAppendard-0.6.0.zip`, while the git tag is `v0.6.0`.
 
 ## Upstream sources
 
@@ -41,7 +42,7 @@ Source tags and asset URLs are pinned in `versions.lock` for reproducibility.
 - `scripts/build_appendard.py` — imports Inter outlines, preserves upright spacing, scales to UPM 1000, emits OTFs
 - `scripts/fix_metadata.py` — normalizes OpenType name records and style bits
 - `scripts/add_italic_cjk_guard.py` — adds the italic-to-upright-CJK collision guard
-- `scripts/make_specimen.sh` and `scripts/package_dist.py` — specimen PDF and release ZIP
+- `scripts/make_specimen.sh` and `scripts/package_distribution.py` — specimen PDF and release ZIP
 
 A `make build` target produces the full family; `make test` runs the helper test suite.
 

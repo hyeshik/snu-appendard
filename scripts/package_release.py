@@ -14,13 +14,10 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from package_dist import EXPECTED_OTF_FILENAMES
+from package_distribution import expected_archive_entries
 
 
-DEFAULT_VERSION = "0.2.0"
-RELEASE_ROOT_FILES = ("specimen.pdf", "README.md", "LICENSE", "NOTICE")
-
-
+DEFAULT_VERSION = "0.6.0"
 def normalize_version(version: str) -> str:
     normalized = version.removeprefix("v").strip()
     if not normalized:
@@ -41,7 +38,7 @@ def checksum_name(version: str) -> str:
 
 
 def expected_release_entries() -> list[str]:
-    return [f"otf/{name}" for name in EXPECTED_OTF_FILENAMES] + list(RELEASE_ROOT_FILES)
+    return expected_archive_entries()
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -108,7 +105,7 @@ def main() -> None:
     if not args.skip_tests:
         run([args.make, "test", f"PYTHON={args.python}"])
     if not args.skip_build:
-        run([args.make, "dist", f"VERSION={version}", f"PYTHON={args.python}"])
+        run([args.make, "distribution", f"VERSION={version}", f"PYTHON={args.python}"])
 
     validate_release_zip(zip_path)
     write_sha256(zip_path, dist_dir / checksum_name(version))

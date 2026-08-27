@@ -4,6 +4,7 @@ import sys
 import tempfile
 import types
 import unittest
+from zipfile import ZipFile
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -47,7 +48,7 @@ class BuildAppendardContractTests(unittest.TestCase):
         self.assertEqual(builder.style_name("Regular", False), "Regular")
         self.assertEqual(builder.style_name("Regular", True), "Italic")
         self.assertEqual(builder.style_name("Bold", True), "Bold Italic")
-        self.assertEqual(builder.postscript_style_name("Regular", True), "Italic")
+        self.assertEqual(builder.postscript_style_name("Regular", True), "RegularItalic")
         self.assertEqual(builder.postscript_style_name("Bold", True), "BoldItalic")
         self.assertEqual(
             builder.output_filename("ExtraLight", True),
@@ -400,8 +401,8 @@ class FixMetadataContractTests(unittest.TestCase):
         builder = load_module("build_appendard", "scripts/build_appendard.py")
         fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
 
-        self.assertEqual(builder.VERSION, "0.2.0")
-        self.assertEqual(fixer.VERSION, "0.2.0")
+        self.assertEqual(builder.VERSION, "0.6.0")
+        self.assertEqual(fixer.VERSION, "0.6.0")
 
     def test_head_revision_reports_our_version_not_pretendards(self):
         fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
@@ -418,11 +419,25 @@ class FixMetadataContractTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 fixer.font_revision(ambiguous)
 
+    def test_cff_version_replaces_the_upstream_cid_version(self):
+        fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
+        top_dict = types.SimpleNamespace(CIDFontVersion=1.309)
+        font = {
+            "CFF ": types.SimpleNamespace(
+                cff=types.SimpleNamespace(topDictIndex=[top_dict])
+            )
+        }
+
+        fixer.normalize_cff_version(font)
+
+        self.assertEqual(top_dict.version, "0.6.0")
+        self.assertEqual(top_dict.CIDFontVersion, 0.6)
+
     def test_regular_italic_metadata_uses_family_style_and_postscript_names(self):
         fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
 
         metadata = fixer.metadata_for_filename(
-            "SNUAppendard-Italic.otf",
+            "SNUAppendard-RegularItalic.otf",
             {"PRETENDARD_TAG": "v1.3.9", "INTER_TAG": "v3.19"},
             "20260509T000000Z",
         )
@@ -432,8 +447,8 @@ class FixMetadataContractTests(unittest.TestCase):
         self.assertEqual(metadata.names[1], "SNU Appendard")
         self.assertEqual(metadata.names[2], "Italic")
         self.assertEqual(metadata.names[4], "SNU Appendard Italic")
-        self.assertEqual(metadata.names[5], "Version 0.2.0; Pretendard v1.3.9; Inter v3.19; build 20260509T000000Z")
-        self.assertEqual(metadata.names[6], "SNUAppendard-Italic")
+        self.assertEqual(metadata.names[5], "Version 0.6.0")
+        self.assertEqual(metadata.names[6], "SNUAppendard-RegularItalic")
         self.assertEqual(metadata.names[16], "SNU Appendard")
         self.assertEqual(metadata.names[17], "Italic")
 
@@ -599,7 +614,9 @@ class AnalyzeMappingContractTests(unittest.TestCase):
 
 class PackageDistContractTests(unittest.TestCase):
     def test_find_otfs_requires_complete_eighteen_font_family(self):
-        packager = load_module("package_dist", "scripts/package_dist.py")
+        packager = load_module(
+            "package_distribution", "scripts/package_distribution.py"
+        )
 
         with tempfile.TemporaryDirectory() as tmp:
             otf_dir = pathlib.Path(tmp)
@@ -612,7 +629,41 @@ class PackageDistContractTests(unittest.TestCase):
             (otf_dir / packager.EXPECTED_OTF_FILENAMES[-1]).write_bytes(b"font")
             self.assertEqual(
                 [path.name for path in packager.find_expected_otfs(otf_dir)],
-                packager.EXPECTED_OTF_FILENAMES,
+                list(packager.EXPECTED_OTF_FILENAMES),
+            )
+
+    def test_distribution_contains_only_flat_fonts_and_licenses(self):
+        packager = load_module(
+            "package_distribution_zip", "scripts/package_distribution.py"
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = pathlib.Path(tmp)
+            otf_dir = project_root / "otf"
+            otf_dir.mkdir()
+            for name in packager.EXPECTED_OTF_FILENAMES:
+                (otf_dir / name).write_bytes(b"font")
+            for source, _ in packager.LICENSE_ENTRIES:
+                path = project_root / source
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("license")
+
+            output = project_root / "distribution.zip"
+            packager.write_distribution(otf_dir, output, project_root)
+
+            with ZipFile(output) as archive:
+                self.assertEqual(
+                    archive.namelist(), packager.expected_archive_entries()
+                )
+            self.assertIn(
+                "SNUAppendard-RegularItalic.otf",
+                packager.expected_archive_entries(),
+            )
+            self.assertNotIn(
+                "SNUAppendard-Italic.otf", packager.expected_archive_entries()
+            )
+            self.assertTrue(
+                all("/" not in name for name in packager.expected_archive_entries())
             )
 
 
@@ -620,26 +671,27 @@ class PackageReleaseContractTests(unittest.TestCase):
     def test_release_asset_names_match_github_release_convention(self):
         release = load_module("package_release", "scripts/package_release.py")
 
-        self.assertEqual(release.release_zip_name("0.2.0"), "SNUAppendard-0.2.0.zip")
-        # A tag-style "v0.2.0" names the same asset as a bare "0.2.0".
-        self.assertEqual(release.release_zip_name("v0.2.0"), "SNUAppendard-0.2.0.zip")
+        self.assertEqual(release.release_zip_name("0.6.0"), "SNUAppendard-0.6.0.zip")
+        # A tag-style "v0.6.0" names the same asset as a bare "0.6.0".
+        self.assertEqual(release.release_zip_name("v0.6.0"), "SNUAppendard-0.6.0.zip")
         self.assertEqual(
-            release.checksum_name("0.2.0"),
-            "SNUAppendard-0.2.0.zip.sha256",
+            release.checksum_name("0.6.0"),
+            "SNUAppendard-0.6.0.zip.sha256",
         )
         self.assertEqual(
-            release.release_note_name("0.2.0"),
-            "SNUAppendard-0.2.0-release-notes.md",
+            release.release_note_name("0.6.0"),
+            "SNUAppendard-0.6.0-release-notes.md",
         )
 
     def test_release_zip_layout_matches_previous_github_asset(self):
         release = load_module("package_release", "scripts/package_release.py")
-        packager = load_module("package_dist", "scripts/package_dist.py")
+        packager = load_module(
+            "package_distribution", "scripts/package_distribution.py"
+        )
 
         self.assertEqual(
             release.expected_release_entries(),
-            [f"otf/{name}" for name in packager.EXPECTED_OTF_FILENAMES]
-            + ["specimen.pdf", "README.md", "LICENSE", "NOTICE"],
+            packager.expected_archive_entries(),
         )
 
 
