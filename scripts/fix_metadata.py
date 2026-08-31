@@ -12,10 +12,28 @@ from fontTools.ttLib import TTFont
 
 FAMILY_NAME = "SNU Appendard"
 POSTSCRIPT_FAMILY_NAME = "SNUAppendard"
-VERSION = "0.6.0"
+VERSION = "0.6.1"
 VENDOR_ID = "HCHK"
 DEFAULT_ITALIC_ANGLE = -10.0
 TARGET_UPM = 1000
+
+PRETENDARD_COPYRIGHT_RFN = (
+    "Copyright (c) 2021, Kil Hyung-jin "
+    "(https://github.com/orioncactus/pretendard), "
+    "with Reserved Font Name Pretendard."
+)
+INTER_COPYRIGHT = (
+    "Copyright (c) 2016 The Inter Project Authors (https://github.com/rsms/inter)."
+)
+DERIVATIVE_COPYRIGHT = "Copyright (c) 2026 Hyeshik Chang (modifications)."
+COPYRIGHT_TEXT = " ".join(
+    (PRETENDARD_COPYRIGHT_RFN, INTER_COPYRIGHT, DERIVATIVE_COPYRIGHT)
+)
+LICENSE_DESCRIPTION = (
+    "This Font Software is licensed under the SIL Open Font License, Version 1.1. "
+    "The Reserved Font Name Pretendard applies to the upstream Pretendard Font Software."
+)
+LICENSE_URL = "https://openfontlicense.org"
 
 WEIGHT_CLASSES = {
     "Thin": 100,
@@ -227,11 +245,6 @@ def metadata_for_filename(
     ps_name = f"{POSTSCRIPT_FAMILY_NAME}-{postscript_style_name(style, italic)}"
     full_name = f"{FAMILY_NAME} {output_style}"
     stamp = build_stamp or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    copyright_text = (
-        "Copyright (c) Hyung-jin Kil and Pretendard contributors; "
-        "Copyright (c) Rasmus Andersson and Inter contributors; "
-        "modified by Hyeshik Chang as SNU Appendard."
-    )
     notice = (
         "SNU Appendard is a derivative of Pretendard and Inter. "
         "It uses the upstream names only for attribution."
@@ -242,7 +255,7 @@ def metadata_for_filename(
         italic=italic,
         weight_class=WEIGHT_CLASSES[style],
         names={
-            0: copyright_text,
+            0: COPYRIGHT_TEXT,
             1: FAMILY_NAME,
             2: output_style,
             3: f"{VERSION};{VENDOR_ID};{ps_name};{stamp}",
@@ -252,8 +265,8 @@ def metadata_for_filename(
             7: notice,
             8: "Hyeshik Chang",
             9: "Hyeshik Chang",
-            13: "SIL Open Font License, Version 1.1",
-            14: "https://openfontlicense.org",
+            13: LICENSE_DESCRIPTION,
+            14: LICENSE_URL,
             16: FAMILY_NAME,
             17: output_style,
             18: full_name,
@@ -307,6 +320,7 @@ def normalize_style_tables(font: TTFont, metadata: FontMetadata) -> None:
         os2_table.usWeightClass = metadata.weight_class
         os2_table.usWidthClass = 5
         os2_table.achVendID = VENDOR_ID
+        os2_table.fsType = 0
         os2_table.fsSelection = (
             os2_table.fsSelection & ~(0x01 | 0x20 | 0x40)
         ) | fs_selection(metadata.weight_class, metadata.italic)

@@ -110,7 +110,7 @@ All outputs use:
 
 - Family name: `SNU Appendard`
 - File and PostScript prefix: `SNUAppendard`
-- Version name: `0.6.0` (`head.fontRevision == 0.6`)
+- Version name: `0.6.1` (`head.fontRevision == 0.601`)
 - OpenType/CFF outlines
 - `head.unitsPerEm == 1000`
 
@@ -212,5 +212,8 @@ used to size and position imported Inter outlines, while upright advances and
 left sidebearings stay compatible with Pretendard and CJK glyphs remain from
 Pretendard.
 
-SNU Appendard does not use the reserved upstream family names. See `NOTICE` for
-attribution and modification details.
+SNU Appendard preserves Pretendard's Reserved Font Name declaration in the
+license files and every OTF's copyright and license metadata, while keeping
+`Pretendard` out of all primary family names. See `NOTICE` for attribution and
+modification details. Every output also sets `OS/2.fsType` to `0` so inherited
+embedding restrictions do not contradict the OFL.

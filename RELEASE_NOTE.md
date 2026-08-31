@@ -1,51 +1,33 @@
-# SNU Appendard v0.6.0
+# SNU Appendard v0.6.1
 
-Spacing release of SNU Appendard — a Pretendard-derived OpenType/CFF font family that pairs Pretendard's Hangul and CJK glyphs with Inter's Latin outlines, including true Inter italic forms.
+SNU Appendard 0.6.1 is a license-metadata hardening release. It does not change
+glyph outlines, metrics, kerning, weight assignments, or family naming.
 
-## Highlights
+## Copyright and license changes
 
-- **Italic CJK collision guard**: Italic styles no longer let sloped letters overlap the upright CJK glyphs next to them. Inter Italic carries ink outside the advance on both sides of a letter, so pairs such as `f가` and `다f` used to overlap by 20 to 76 units. Every italic now carries a generated kerning lookup that widens only the colliding pairs, in both orders, while leaving everything that already cleared untouched. See the README for the mechanism and its limits.
-- **Hybrid design**: Hangul and CJK glyphs from Pretendard 1.3.9; non-CJK outlines from Inter 4.1 for both upright and italic styles.
-- **True italics**: Imports authentic Inter italic forms instead of synthesizing slants from the upright.
-- **Pretendard-compatible spacing**: Upright styles preserve Pretendard's advance widths and left sidebearings, so existing layouts stay visually stable.
-- **CJK-context symbols fixed**: Enclosed alphanumerics, dingbat circled digits, enclosing combining marks, and private-use glyphs now remain from Pretendard so symbols such as `①`, `⓪`, `➀`, and `🄰` keep their intended visual width.
-- **HP-safe UPM**: OTF outputs are generated at `unitsPerEm == 1000` to avoid HP PostScript/PCL interpreters that misread non-1000 CFF fonts.
-- **Renamed family**: Distributed as `SNU Appendard` / `SNUAppendard`; reserved upstream names are not used.
+- The main license now preserves Pretendard's original copyright statement and
+  its `Reserved Font Name Pretendard` declaration verbatim.
+- Every OTF carries the Pretendard RFN declaration, the Inter copyright, and
+  the SNU Appendard modification copyright in OpenType name ID 0.
+- OpenType name ID 13 identifies the SIL Open Font License 1.1 and records that
+  the Pretendard RFN applies to the upstream Pretendard Font Software. Name ID
+  14 links to the official OFL site.
+- `OS/2.fsType` is normalized to `0` so the fonts advertise installable
+  embedding instead of inheriting a restriction that conflicts with the OFL.
+- Automated tests require the upstream RFN in copyright and license metadata
+  while rejecting `Pretendard` from the user-facing SNU Appendard family,
+  full, PostScript, typographic-family, and compatible-full names.
 
-## What's in the build
+Preserving an upstream RFN declaration and using it as a derivative family name
+are separate requirements: the declaration remains in the license metadata,
+while the distributed family continues to use `SNU Appendard` / `SNUAppendard`.
 
-The release ZIP is `SNUAppendard-0.6.0.zip`. Its root contains 18 static OTF
-files and the SNU Appendard, Inter, and Pretendard license texts:
+## Distribution
 
-- **Upright**: Thin, ExtraLight, Light, Regular, Medium, SemiBold, Bold, ExtraBold, Black
-- **Italic**: ThinItalic, ExtraLightItalic, LightItalic, RegularItalic, MediumItalic, SemiBoldItalic, BoldItalic, ExtraBoldItalic, BlackItalic
+The release asset is `SNUAppendard-0.6.1.zip`. Its flat archive root contains
+18 static OTF files plus `LICENSE.txt`, `LICENSE-Inter.txt`, and
+`LICENSE-Pretendard.txt`. Specimens, source fonts, and project files are not
+included.
 
-TTF and variable builds are intentionally deferred for this iteration.
-
-Every font reports `Version 0.6.0` in OpenType name ID 5 and `0.6` in the
-numeric `head.fontRevision` field. The release file is
-`SNUAppendard-0.6.0.zip`, while the git tag is `v0.6.0`.
-
-## Upstream sources
-
-| Project | Tag | Author |
-|---|---|---|
-| Pretendard | v1.3.9 | Hyung-jin Kil and contributors |
-| Inter | v4.1 | Rasmus Andersson and contributors |
-
-Source tags and asset URLs are pinned in `versions.lock` for reproducibility.
-
-## Build pipeline
-
-- `scripts/download_sources.sh` — resolves and pins upstream releases
-- `scripts/analyze_mapping.py` — derives the Inter→Pretendard Latin transform
-- `scripts/build_appendard.py` — imports Inter outlines, preserves upright spacing, scales to UPM 1000, emits OTFs
-- `scripts/fix_metadata.py` — normalizes OpenType name records and style bits
-- `scripts/add_italic_cjk_guard.py` — adds the italic-to-upright-CJK collision guard
-- `scripts/make_specimen.sh` and `scripts/package_distribution.py` — specimen PDF and release ZIP
-
-A `make build` target produces the full family; `make test` runs the helper test suite.
-
-## License
-
-SIL Open Font License 1.1. Upstream copyright notices apply to their respective portions. SNU Appendard is not endorsed by the Pretendard or Inter authors. See `NOTICE` and `LICENSE` for details.
+Every font reports `Version 0.6.1` in OpenType name ID 5 and `0.601` in
+`head.fontRevision`.

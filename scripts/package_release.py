@@ -17,7 +17,7 @@ if str(SCRIPT_DIR) not in sys.path:
 from package_distribution import expected_archive_entries
 
 
-DEFAULT_VERSION = "0.6.0"
+DEFAULT_VERSION = "0.6.1"
 def normalize_version(version: str) -> str:
     normalized = version.removeprefix("v").strip()
     if not normalized:

@@ -401,8 +401,8 @@ class FixMetadataContractTests(unittest.TestCase):
         builder = load_module("build_appendard", "scripts/build_appendard.py")
         fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
 
-        self.assertEqual(builder.VERSION, "0.6.0")
-        self.assertEqual(fixer.VERSION, "0.6.0")
+        self.assertEqual(builder.VERSION, "0.6.1")
+        self.assertEqual(fixer.VERSION, "0.6.1")
 
     def test_head_revision_reports_our_version_not_pretendards(self):
         fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
@@ -430,8 +430,24 @@ class FixMetadataContractTests(unittest.TestCase):
 
         fixer.normalize_cff_version(font)
 
-        self.assertEqual(top_dict.version, "0.6.0")
-        self.assertEqual(top_dict.CIDFontVersion, 0.6)
+        self.assertEqual(top_dict.version, "0.6.1")
+        self.assertEqual(top_dict.CIDFontVersion, 0.601)
+
+    def test_metadata_allows_installable_embedding_under_the_ofl(self):
+        fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
+        os2_table = types.SimpleNamespace(
+            usWeightClass=400,
+            usWidthClass=5,
+            achVendID="TEST",
+            fsType=8,
+            fsSelection=0,
+        )
+        font = {"OS/2": os2_table}
+        metadata = fixer.metadata_for_filename("SNUAppendard-Regular.otf", {})
+
+        fixer.normalize_style_tables(font, metadata)
+
+        self.assertEqual(os2_table.fsType, 0)
 
     def test_regular_italic_metadata_uses_family_style_and_postscript_names(self):
         fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
@@ -447,10 +463,29 @@ class FixMetadataContractTests(unittest.TestCase):
         self.assertEqual(metadata.names[1], "SNU Appendard")
         self.assertEqual(metadata.names[2], "Italic")
         self.assertEqual(metadata.names[4], "SNU Appendard Italic")
-        self.assertEqual(metadata.names[5], "Version 0.6.0")
+        self.assertEqual(metadata.names[5], "Version 0.6.1")
         self.assertEqual(metadata.names[6], "SNUAppendard-RegularItalic")
         self.assertEqual(metadata.names[16], "SNU Appendard")
         self.assertEqual(metadata.names[17], "Italic")
+
+    def test_metadata_preserves_upstream_rfn_and_license(self):
+        builder = load_module("build_appendard", "scripts/build_appendard.py")
+        fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
+
+        metadata = fixer.metadata_for_filename(
+            "SNUAppendard-Regular.otf",
+            {},
+            "20260509T000000Z",
+        )
+
+        self.assertEqual(builder.COPYRIGHT_TEXT, fixer.COPYRIGHT_TEXT)
+        self.assertIn("with Reserved Font Name Pretendard.", metadata.names[0])
+        self.assertIn("The Inter Project Authors", metadata.names[0])
+        self.assertIn("Hyeshik Chang (modifications)", metadata.names[0])
+        self.assertIn("Reserved Font Name Pretendard", metadata.names[13])
+        self.assertEqual(metadata.names[14], "https://openfontlicense.org")
+        for name_id in (1, 4, 6, 16, 18):
+            self.assertNotIn("Pretendard", metadata.names[name_id])
 
     def test_weighted_italic_metadata_preserves_weight_in_style_names(self):
         fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
@@ -613,6 +648,16 @@ class AnalyzeMappingContractTests(unittest.TestCase):
 
 
 class PackageDistContractTests(unittest.TestCase):
+    def test_license_headers_preserve_pretendard_rfn(self):
+        project_license = (ROOT / "LICENSE").read_text()
+        upstream_license = (ROOT / "licenses" / "Pretendard.txt").read_text()
+        project_header = project_license.split("This Font Software", 1)[0]
+        upstream_header = upstream_license.split("This Font Software", 1)[0]
+
+        self.assertIn("with Reserved Font Name Pretendard.", project_header)
+        self.assertIn("with Reserved Font Name Pretendard.", upstream_header)
+        self.assertIn("Hyeshik Chang (modifications)", project_header)
+
     def test_find_otfs_requires_complete_eighteen_font_family(self):
         packager = load_module(
             "package_distribution", "scripts/package_distribution.py"
@@ -671,16 +716,16 @@ class PackageReleaseContractTests(unittest.TestCase):
     def test_release_asset_names_match_github_release_convention(self):
         release = load_module("package_release", "scripts/package_release.py")
 
-        self.assertEqual(release.release_zip_name("0.6.0"), "SNUAppendard-0.6.0.zip")
-        # A tag-style "v0.6.0" names the same asset as a bare "0.6.0".
-        self.assertEqual(release.release_zip_name("v0.6.0"), "SNUAppendard-0.6.0.zip")
+        self.assertEqual(release.release_zip_name("0.6.1"), "SNUAppendard-0.6.1.zip")
+        # A tag-style "v0.6.1" names the same asset as a bare "0.6.1".
+        self.assertEqual(release.release_zip_name("v0.6.1"), "SNUAppendard-0.6.1.zip")
         self.assertEqual(
-            release.checksum_name("0.6.0"),
-            "SNUAppendard-0.6.0.zip.sha256",
+            release.checksum_name("0.6.1"),
+            "SNUAppendard-0.6.1.zip.sha256",
         )
         self.assertEqual(
-            release.release_note_name("0.6.0"),
-            "SNUAppendard-0.6.0-release-notes.md",
+            release.release_note_name("0.6.1"),
+            "SNUAppendard-0.6.1-release-notes.md",
         )
 
     def test_release_zip_layout_matches_previous_github_asset(self):

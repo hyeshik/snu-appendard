@@ -14,10 +14,28 @@ from typing import Iterator, NamedTuple
 FAMILY_NAME = "SNU Appendard"
 POSTSCRIPT_FAMILY_NAME = "SNUAppendard"
 FILE_FAMILY_NAME = POSTSCRIPT_FAMILY_NAME
-VERSION = "0.6.0"
+VERSION = "0.6.1"
 VENDOR_ID = "HCHK"
 DEFAULT_OUTPUT_DIR = "dist/otf"
 TARGET_UPM = 1000
+
+PRETENDARD_COPYRIGHT_RFN = (
+    "Copyright (c) 2021, Kil Hyung-jin "
+    "(https://github.com/orioncactus/pretendard), "
+    "with Reserved Font Name Pretendard."
+)
+INTER_COPYRIGHT = (
+    "Copyright (c) 2016 The Inter Project Authors (https://github.com/rsms/inter)."
+)
+DERIVATIVE_COPYRIGHT = "Copyright (c) 2026 Hyeshik Chang (modifications)."
+COPYRIGHT_TEXT = " ".join(
+    (PRETENDARD_COPYRIGHT_RFN, INTER_COPYRIGHT, DERIVATIVE_COPYRIGHT)
+)
+LICENSE_DESCRIPTION = (
+    "This Font Software is licensed under the SIL Open Font License, Version 1.1. "
+    "The Reserved Font Name Pretendard applies to the upstream Pretendard Font Software."
+)
+LICENSE_URL = "https://openfontlicense.org"
 
 
 class WeightSpec(NamedTuple):
@@ -380,20 +398,15 @@ def rewrite_metadata(
     ps_name = f"{POSTSCRIPT_FAMILY_NAME}-{postscript_style_name(spec.style, italic)}"
     full_name = f"{FAMILY_NAME} {output_style}"
     build_stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    copyright_text = (
-        "Copyright (c) Hyung-jin Kil and Pretendard contributors; "
-        "Copyright (c) Rasmus Andersson and Inter contributors; "
-        "modified by Hyeshik Chang as SNU Appendard."
-    )
-
     font.familyname = FAMILY_NAME
     font.fullname = full_name
     font.fontname = ps_name
     font.weight = "Normal" if spec.style == "Regular" else spec.style
     font.version = VERSION
-    font.copyright = copyright_text
+    font.copyright = COPYRIGHT_TEXT
     font.os2_weight = spec.weight_class
     font.os2_width = 5
+    font.os2_fstype = 0
     font.os2_vendor = VENDOR_ID
     font.os2_stylemap = os2_stylemap(spec.weight_class, italic)
     font.italicangle = italic_angle if italic else 0
@@ -408,7 +421,7 @@ def rewrite_metadata(
         "It uses the upstream names only for attribution."
     )
     font.sfnt_names = (
-        ("English (US)", "Copyright", copyright_text),
+        ("English (US)", "Copyright", COPYRIGHT_TEXT),
         ("English (US)", "Family", FAMILY_NAME),
         ("English (US)", "SubFamily", output_style),
         ("English (US)", "UniqueID", f"{VERSION};{VENDOR_ID};{ps_name};{build_stamp}"),
@@ -421,8 +434,8 @@ def rewrite_metadata(
         ("English (US)", "Preferred Family", FAMILY_NAME),
         ("English (US)", "Preferred Styles", preferred_style),
         ("English (US)", "Compatible Full", full_name),
-        ("English (US)", "License", "SIL Open Font License, Version 1.1"),
-        ("English (US)", "License URL", "https://openfontlicense.org"),
+        ("English (US)", "License", LICENSE_DESCRIPTION),
+        ("English (US)", "License URL", LICENSE_URL),
     )
 
 
@@ -441,6 +454,8 @@ def verify_otf(path: Path) -> None:
             errors.append("CFF table is missing")
         if "glyf" in font:
             errors.append("glyf table should not be present in OTF output")
+        if font["OS/2"].fsType != 0:
+            errors.append(f"OS/2.fsType is {font['OS/2'].fsType}, expected 0")
         if errors:
             raise SystemExit(f"{path} failed verification: " + "; ".join(errors))
 
