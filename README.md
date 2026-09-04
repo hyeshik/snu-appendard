@@ -1,5 +1,7 @@
 # SNU Appendard
 
+Explore the complete SNU typeface collection on the [QBio Fonts website](https://qbio.io/share/fonts/).
+
 SNU Appendard is a Pretendard-derived OpenType/CFF build that keeps Hangul and
 CJK glyphs from Pretendard, imports Inter non-CJK outlines for both upright and
 italic styles, and adds true Inter italic forms. Italic styles carry a kerning
