@@ -14,7 +14,7 @@ from typing import Iterator, NamedTuple
 FAMILY_NAME = "SNU Appendard"
 POSTSCRIPT_FAMILY_NAME = "SNUAppendard"
 FILE_FAMILY_NAME = POSTSCRIPT_FAMILY_NAME
-VERSION = "0.6.1"
+VERSION = "0.6.2"
 VENDOR_ID = "HCHK"
 DEFAULT_OUTPUT_DIR = "dist/otf"
 TARGET_UPM = 1000
@@ -497,7 +497,8 @@ def generate_variant(
         with suppress_c_stderr(quiet):
             validation_state = base_font.validate()
         with suppress_c_stderr(quiet):
-            base_font.generate(str(output_path), flags=("opentype",))
+            # Round only at final export for CFF printer compatibility.
+            base_font.generate(str(output_path), flags=("opentype", "round"))
         if not skip_verify:
             verify_otf(output_path)
         print(

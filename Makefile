@@ -63,6 +63,7 @@ specimen: build
 	scripts/make_specimen.sh
 
 distribution: build
+	$(PYTHON) -m unittest discover -s tests -p test_cff_print_coordinates.py
 	$(PYTHON) scripts/package_distribution.py \
 		--input-dir "$(OTF_DIR)" \
 		--output "$(PACKAGE_ZIP)"

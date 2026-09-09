@@ -14,6 +14,13 @@ incorrectly assume all CFF fonts use 1000 units per em.
 This iteration builds static OTF files only. TTF and variable builds are
 intentionally deferred.
 
+## Printing compatibility
+
+Final OTF export explicitly rounds CFF outline and hint operands to integers,
+matching the print-compatibility policy of the other SNU font families.
+Appendard was the normally printed control in the HP M281fdw report.
+Distribution builds now check every generated glyph for fractional coordinates.
+
 ## Requirements
 
 - FontForge with Python scripting support
@@ -112,7 +119,7 @@ All outputs use:
 
 - Family name: `SNU Appendard`
 - File and PostScript prefix: `SNUAppendard`
-- Version name: `0.6.1` (`head.fontRevision == 0.601`)
+- Version name: `0.6.2` (`head.fontRevision == 0.602`)
 - OpenType/CFF outlines
 - `head.unitsPerEm == 1000`
 
