@@ -10,6 +10,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator, NamedTuple
 
+from fix_metadata import apply_metadata
+from vertical_fit import apply_vertical_fit
+
 
 FAMILY_NAME = "SNU Appendard"
 POSTSCRIPT_FAMILY_NAME = "SNUAppendard"
@@ -167,6 +170,7 @@ def output_filename(style: str, italic: bool) -> str:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    from add_italic_cjk_guard import DEFAULT_CLEARANCE
     parser = argparse.ArgumentParser(
         description="Build SNU Appendard OTFs from Pretendard and Inter sources."
     )
@@ -183,6 +187,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--transform", default="build/mapping_report.json")
     parser.add_argument("--versions-lock", default="versions.lock")
     parser.add_argument("--skip-verify", action="store_true")
+    parser.add_argument("--guard-clearance", type=int, default=DEFAULT_CLEARANCE)
     parser.add_argument("--verbose-fontforge", action="store_true")
     return parser
 
@@ -471,7 +476,10 @@ def generate_variant(
     versions: dict[str, str],
     quiet: bool,
     skip_verify: bool,
+    guard_clearance: int,
 ) -> Path:
+    from add_italic_cjk_guard import guard_font
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
     base_font = open_font(fontforge, pretendard_path, quiet)
     inter_font = open_font(fontforge, inter_path, quiet) if inter_path is not None else None
@@ -499,18 +507,22 @@ def generate_variant(
         with suppress_c_stderr(quiet):
             # Round only at final export for CFF printer compatibility.
             base_font.generate(str(output_path), flags=("opentype", "round"))
-        if not skip_verify:
-            verify_otf(output_path)
-        print(
-            f"{output_path}: imported={imported}, italic={italic}, "
-            f"transform=({transform.scale_x:.6f},{transform.scale_y:.6f},"
-            f"{transform.translate_y:.6f}), validate=0x{validation_state:x}"
-        )
-        return output_path
     finally:
         if inter_font is not None:
             inter_font.close()
         base_font.close()
+
+    apply_metadata(output_path, versions, pretendard_path)
+    guard_font(output_path, clearance=guard_clearance)
+    apply_vertical_fit(output_path)
+    if not skip_verify:
+        verify_otf(output_path)
+    print(
+        f"{output_path}: imported={imported}, italic={italic}, "
+        f"transform=({transform.scale_x:.6f},{transform.scale_y:.6f},"
+        f"{transform.translate_y:.6f}), validate=0x{validation_state:x}"
+    )
+    return output_path
 
 
 def build_explicit(fontforge, args, versions: dict[str, str], quiet: bool) -> list[Path]:
@@ -549,6 +561,7 @@ def build_explicit(fontforge, args, versions: dict[str, str], quiet: bool) -> li
             versions,
             quiet,
             args.skip_verify,
+            args.guard_clearance,
         ),
         generate_variant(
             fontforge,
@@ -561,6 +574,7 @@ def build_explicit(fontforge, args, versions: dict[str, str], quiet: bool) -> li
             versions,
             quiet,
             args.skip_verify,
+            args.guard_clearance,
         ),
     ]
     return built
@@ -589,6 +603,7 @@ def build_all(fontforge, args, versions: dict[str, str], quiet: bool) -> list[Pa
                 versions,
                 quiet,
                 args.skip_verify,
+                args.guard_clearance,
             )
         )
         built.append(
@@ -603,6 +618,7 @@ def build_all(fontforge, args, versions: dict[str, str], quiet: bool) -> list[Pa
                 versions,
                 quiet,
                 args.skip_verify,
+                args.guard_clearance,
             )
         )
     return built

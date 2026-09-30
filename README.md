@@ -14,6 +14,30 @@ incorrectly assume all CFF fonts use 1000 units per em.
 This iteration builds static OTF files only. TTF and variable builds are
 intentionally deferred.
 
+## Vertical sizing and alignment
+
+All main SNU Appendard fonts use the adopted macOS system-font fit. Family,
+PostScript, and file names retain `SNU Appendard` / `SNUAppendard` without a
+`Mac` suffix. The final stage runs once after the existing design transforms,
+metadata, and italic collision guard. It applies these additional transforms
+at UPM 1000; positive Y moves ink upward:
+
+| Glyph group | Uniform X/Y scale | Y shift |
+|---|---:|---:|
+| Hangul and Jamo, including their GSUB alternates | 1.007151371 | +9.432657926 |
+| Latin and all remaining glyphs | 0.987723485 | -0.000000000 |
+
+Both axes use the same factor, preserving the approved glyph aspect ratios.
+Advances, kerning, mark anchors, and hint zones follow the corresponding scale.
+The final `hhea` and `OS/2` typo metrics are **952 / −241 / 0**
+(ascender / descender / line gap), with `USE_TYPO_METRICS` enabled. Windows
+clipping bounds include all ink; cap/x-height metadata follows the transformed
+outlines. Horizontal `BASE` entries use the Roman baseline at zero. Cmap,
+GSUB substitutions, style linking, and the existing release version are kept.
+
+`scripts/vertical_fit.py` contains the final fit and is called by the
+normal build. It does not depend on another SNU repository or study files.
+
 ## Printing compatibility
 
 Final OTF export explicitly rounds CFF outline and hint operands to integers,
@@ -151,6 +175,9 @@ placed directly against an upright glyph can overlap it. Both orders collide,
 and both are specific to the italics: the same pairs clear in the upright
 styles.
 
+The following guard measurements are in the design coordinates before the
+final uniform fit.
+
 | pair | upright | italic, unguarded | italic, guarded |
 | ---- | ------- | ----------------- | --------------- |
 | `f가` | +32 | -20 | +35 |
@@ -158,8 +185,10 @@ styles.
 | `다f` | +29 | -69 | +31 |
 | `다j` | -10 | -76 | +34 |
 
-`make build` therefore runs `scripts/add_italic_cjk_guard.py` over the generated
-OTFs. It buckets the italic glyphs by how far their ink passes the advance and
+`scripts/build_appendard.py` therefore normalizes metadata, applies
+`scripts/add_italic_cjk_guard.py`, then applies the final uniform fit. This
+sequence runs for both `make build` and `make prototype`, and for direct builder
+invocations. It buckets the italic glyphs by how far their ink passes the advance and
 the upright glyphs by their side bearings, then adds a class-based GPOS pair
 positioning lookup to each `kern` feature that widens only the colliding pairs.
 Upright fonts are skipped.
@@ -217,9 +246,9 @@ environment overrides to `scripts/download_sources.sh`.
 
 `scripts/analyze_mapping.py` reports reference glyph residuals so Inter version
 skew is visible. The Makefile allows large residuals because the transform is
-used to size and position imported Inter outlines, while upright advances and
-left sidebearings stay compatible with Pretendard and CJK glyphs remain from
-Pretendard.
+used to size and position imported Inter outlines, while the intermediate upright advances and left sidebearings match
+Pretendard and CJK outlines come from Pretendard. The final uniform fit then
+scales those outlines and advances together.
 
 SNU Appendard preserves Pretendard's Reserved Font Name declaration in the
 license files and every OTF's copyright and license metadata, while keeping

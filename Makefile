@@ -31,16 +31,8 @@ prototype: mapping
 		--transform "$(MAPPING_REPORT)" \
 		--weight Regular \
 		--output "$(BUILD_DIR)/SNUAppendard-Regular.otf" \
-		--output-italic "$(BUILD_DIR)/SNUAppendard-RegularItalic.otf"
-	$(PYTHON) scripts/fix_metadata.py \
-		--font "$(BUILD_DIR)/SNUAppendard-Regular.otf" \
-		--font "$(BUILD_DIR)/SNUAppendard-RegularItalic.otf" \
-		--pretendard-dir "$(SOURCE_DIR)/pretendard" \
-		--versions-lock versions.lock
-	$(PYTHON) scripts/add_italic_cjk_guard.py \
-		--font "$(BUILD_DIR)/SNUAppendard-Regular.otf" \
-		--font "$(BUILD_DIR)/SNUAppendard-RegularItalic.otf" \
-		--clearance "$(GUARD_CLEARANCE)"
+		--output-italic "$(BUILD_DIR)/SNUAppendard-RegularItalic.otf" \
+		--guard-clearance "$(GUARD_CLEARANCE)"
 
 build: mapping
 	rm -rf "$(OTF_DIR)"
@@ -50,14 +42,8 @@ build: mapping
 		--pretendard-dir "$(SOURCE_DIR)/pretendard" \
 		--inter-dir "$(SOURCE_DIR)/inter" \
 		--transform "$(MAPPING_REPORT)" \
-		--output-dir "$(OTF_DIR)"
-	$(PYTHON) scripts/fix_metadata.py \
-		--input-dir "$(OTF_DIR)" \
-		--pretendard-dir "$(SOURCE_DIR)/pretendard" \
-		--versions-lock versions.lock
-	$(PYTHON) scripts/add_italic_cjk_guard.py \
-		--input-dir "$(OTF_DIR)" \
-		--clearance "$(GUARD_CLEARANCE)"
+		--output-dir "$(OTF_DIR)" \
+		--guard-clearance "$(GUARD_CLEARANCE)"
 
 specimen: build
 	scripts/make_specimen.sh

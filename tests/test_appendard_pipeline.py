@@ -188,23 +188,10 @@ class MakefileContractTests(unittest.TestCase):
 
         self.assertIn("--allow-large-residuals", makefile)
 
-    def test_build_normalizes_otf_metadata_after_fontforge_generation(self):
+    def test_build_passes_guard_clearance_to_the_end_to_end_builder(self):
         makefile = (ROOT / "Makefile").read_text()
-
-        self.assertIn("scripts/fix_metadata.py", makefile)
-        self.assertIn("--pretendard-dir", makefile)
-
-    def test_build_guards_italic_glyphs_against_upright_cjk(self):
-        makefile = (ROOT / "Makefile").read_text()
-
-        self.assertIn("scripts/add_italic_cjk_guard.py", makefile)
         self.assertIn("GUARD_CLEARANCE ?= 30", makefile)
-        # The guard reads the final metrics, so it has to run after FontForge
-        # generation and after metadata normalization.
-        self.assertLess(
-            makefile.index("scripts/fix_metadata.py"),
-            makefile.index("scripts/add_italic_cjk_guard.py"),
-        )
+        self.assertEqual(makefile.count('--guard-clearance "$(GUARD_CLEARANCE)"'), 2)
 
     def test_prototype_uses_font_discovery_for_nested_source_layouts(self):
         makefile = (ROOT / "Makefile").read_text()

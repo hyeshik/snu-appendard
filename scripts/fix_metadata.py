@@ -397,7 +397,7 @@ def normalize_vertical_metrics(font: TTFont, metrics: VerticalMetrics) -> None:
             cff_top.UnderlineThickness = metrics.cff_underline_thickness
 
 
-def apply_metadata(path: Path, versions: dict[str, str], pretendard_dir: Path | None) -> FontMetadata:
+def apply_metadata(path: Path, versions: dict[str, str], source_path: Path | None) -> FontMetadata:
     metadata = metadata_for_filename(path.name, versions)
     font = TTFont(str(path))
     tmp_path = path.with_suffix(path.suffix + ".tmp")
@@ -405,8 +405,7 @@ def apply_metadata(path: Path, versions: dict[str, str], pretendard_dir: Path | 
         replace_name_records(font, metadata)
         normalize_style_tables(font, metadata)
         normalize_cff_version(font)
-        if pretendard_dir is not None:
-            source_path = find_font_file(pretendard_dir, f"Pretendard-{metadata.style}")
+        if source_path is not None:
             normalize_vertical_metrics(
                 font,
                 read_vertical_metrics(source_path, font["head"].unitsPerEm),
@@ -433,7 +432,11 @@ def main() -> None:
         raise SystemExit("No SNU Appendard OTFs found to normalize.")
 
     for path in paths:
-        metadata = apply_metadata(path, versions, pretendard_dir)
+        source_path = None
+        if pretendard_dir is not None:
+            style = metadata_for_filename(path.name, versions).style
+            source_path = find_font_file(pretendard_dir, f"Pretendard-{style}")
+        metadata = apply_metadata(path, versions, source_path)
         print(
             f"{path}: metadata={metadata.names[6]}, "
             f"style={metadata.names[2]}, weight={metadata.weight_class}"
