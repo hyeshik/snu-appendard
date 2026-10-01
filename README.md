@@ -32,7 +32,8 @@ Advances, kerning, mark anchors, and hint zones follow the corresponding scale.
 The final `hhea` and `OS/2` typo metrics are **952 / −241 / 0**
 (ascender / descender / line gap), with `USE_TYPO_METRICS` enabled. Windows
 clipping bounds include all ink; cap/x-height metadata follows the transformed
-outlines. Horizontal `BASE` entries use the Roman baseline at zero. Cmap,
+outlines. Where a horizontal `BASE` table exists, its Roman baseline is set to
+zero; otherwise the default Roman baseline remains zero. Cmap,
 GSUB substitutions and style linking are kept.
 
 `scripts/vertical_fit.py` contains the final fit and is called by the
