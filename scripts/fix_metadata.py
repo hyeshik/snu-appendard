@@ -12,7 +12,7 @@ from fontTools.ttLib import TTFont
 
 FAMILY_NAME = "SNU Appendard"
 POSTSCRIPT_FAMILY_NAME = "SNUAppendard"
-VERSION = "0.6.2"
+VERSION = "0.6.3"
 VENDOR_ID = "HCHK"
 DEFAULT_ITALIC_ANGLE = -10.0
 TARGET_UPM = 1000

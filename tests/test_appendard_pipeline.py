@@ -388,8 +388,8 @@ class FixMetadataContractTests(unittest.TestCase):
         builder = load_module("build_appendard", "scripts/build_appendard.py")
         fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
 
-        self.assertEqual(builder.VERSION, "0.6.2")
-        self.assertEqual(fixer.VERSION, "0.6.2")
+        self.assertEqual(builder.VERSION, "0.6.3")
+        self.assertEqual(fixer.VERSION, "0.6.3")
 
     def test_head_revision_reports_our_version_not_pretendards(self):
         fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
@@ -417,8 +417,8 @@ class FixMetadataContractTests(unittest.TestCase):
 
         fixer.normalize_cff_version(font)
 
-        self.assertEqual(top_dict.version, "0.6.2")
-        self.assertEqual(top_dict.CIDFontVersion, 0.602)
+        self.assertEqual(top_dict.version, "0.6.3")
+        self.assertEqual(top_dict.CIDFontVersion, 0.603)
 
     def test_metadata_allows_installable_embedding_under_the_ofl(self):
         fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
@@ -450,7 +450,7 @@ class FixMetadataContractTests(unittest.TestCase):
         self.assertEqual(metadata.names[1], "SNU Appendard")
         self.assertEqual(metadata.names[2], "Italic")
         self.assertEqual(metadata.names[4], "SNU Appendard Italic")
-        self.assertEqual(metadata.names[5], "Version 0.6.2")
+        self.assertEqual(metadata.names[5], "Version 0.6.3")
         self.assertEqual(metadata.names[6], "SNUAppendard-RegularItalic")
         self.assertEqual(metadata.names[16], "SNU Appendard")
         self.assertEqual(metadata.names[17], "Italic")
@@ -703,16 +703,16 @@ class PackageReleaseContractTests(unittest.TestCase):
     def test_release_asset_names_match_github_release_convention(self):
         release = load_module("package_release", "scripts/package_release.py")
 
-        self.assertEqual(release.release_zip_name("0.6.2"), "SNUAppendard-0.6.2.zip")
-        # A tag-style "v0.6.2" names the same asset as a bare "0.6.2".
-        self.assertEqual(release.release_zip_name("v0.6.2"), "SNUAppendard-0.6.2.zip")
+        self.assertEqual(release.release_zip_name("0.6.3"), "SNUAppendard-0.6.3.zip")
+        # A tag-style "v0.6.3" names the same asset as a bare "0.6.3".
+        self.assertEqual(release.release_zip_name("v0.6.3"), "SNUAppendard-0.6.3.zip")
         self.assertEqual(
-            release.checksum_name("0.6.2"),
-            "SNUAppendard-0.6.2.zip.sha256",
+            release.checksum_name("0.6.3"),
+            "SNUAppendard-0.6.3.zip.sha256",
         )
         self.assertEqual(
-            release.release_note_name("0.6.2"),
-            "SNUAppendard-0.6.2-release-notes.md",
+            release.release_note_name("0.6.3"),
+            "SNUAppendard-0.6.3-release-notes.md",
         )
 
     def test_release_zip_layout_matches_previous_github_asset(self):

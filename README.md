@@ -33,7 +33,7 @@ The final `hhea` and `OS/2` typo metrics are **952 / −241 / 0**
 (ascender / descender / line gap), with `USE_TYPO_METRICS` enabled. Windows
 clipping bounds include all ink; cap/x-height metadata follows the transformed
 outlines. Horizontal `BASE` entries use the Roman baseline at zero. Cmap,
-GSUB substitutions, style linking, and the existing release version are kept.
+GSUB substitutions and style linking are kept.
 
 `scripts/vertical_fit.py` contains the final fit and is called by the
 normal build. It does not depend on another SNU repository or study files.
@@ -143,7 +143,7 @@ All outputs use:
 
 - Family name: `SNU Appendard`
 - File and PostScript prefix: `SNUAppendard`
-- Version name: `0.6.2` (`head.fontRevision == 0.602`)
+- Version name: `0.6.3` (`head.fontRevision == 0.603`)
 - OpenType/CFF outlines
 - `head.unitsPerEm == 1000`
 

@@ -17,7 +17,7 @@ from vertical_fit import apply_vertical_fit
 FAMILY_NAME = "SNU Appendard"
 POSTSCRIPT_FAMILY_NAME = "SNUAppendard"
 FILE_FAMILY_NAME = POSTSCRIPT_FAMILY_NAME
-VERSION = "0.6.2"
+VERSION = "0.6.3"
 VENDOR_ID = "HCHK"
 DEFAULT_OUTPUT_DIR = "dist/otf"
 TARGET_UPM = 1000
