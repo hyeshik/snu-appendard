@@ -11,13 +11,14 @@ from pathlib import Path
 from typing import Iterator, NamedTuple
 
 from fix_metadata import apply_metadata
+from normalize_space_glyph import normalize_space_glyph
 from vertical_fit import apply_vertical_fit
 
 
 FAMILY_NAME = "SNU Appendard"
 POSTSCRIPT_FAMILY_NAME = "SNUAppendard"
 FILE_FAMILY_NAME = POSTSCRIPT_FAMILY_NAME
-VERSION = "0.6.3"
+VERSION = "0.6.4"
 VENDOR_ID = "HCHK"
 DEFAULT_OUTPUT_DIR = "dist/otf"
 TARGET_UPM = 1000
@@ -461,6 +462,11 @@ def verify_otf(path: Path) -> None:
             errors.append("glyf table should not be present in OTF output")
         if font["OS/2"].fsType != 0:
             errors.append(f"OS/2.fsType is {font['OS/2'].fsType}, expected 0")
+        cmap = font.getBestCmap() or {}
+        if cmap.get(0x20) != "space":
+            errors.append(f"U+0020 maps to {cmap.get(0x20)!r}, expected 'space'")
+        if hasattr(font["CFF "].cff.topDictIndex[0], "ROS"):
+            errors.append("CFF output should be name-keyed, not CID-keyed")
         if errors:
             raise SystemExit(f"{path} failed verification: " + "; ".join(errors))
 
@@ -515,12 +521,14 @@ def generate_variant(
     apply_metadata(output_path, versions, pretendard_path)
     guard_font(output_path, clearance=guard_clearance)
     apply_vertical_fit(output_path)
+    old_space_name, space_gid = normalize_space_glyph(output_path)
     if not skip_verify:
         verify_otf(output_path)
     print(
         f"{output_path}: imported={imported}, italic={italic}, "
         f"transform=({transform.scale_x:.6f},{transform.scale_y:.6f},"
-        f"{transform.translate_y:.6f}), validate=0x{validation_state:x}"
+        f"{transform.translate_y:.6f}), space={old_space_name}->space@{space_gid}, "
+        f"validate=0x{validation_state:x}"
     )
     return output_path
 

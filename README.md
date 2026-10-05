@@ -46,6 +46,14 @@ matching the print-compatibility policy of the other SNU font families.
 Appendard was the normally printed control in the HP M281fdw report.
 Distribution builds now check every generated glyph for fractional coordinates.
 
+The final post-processing step also converts Pretendard's one-dictionary
+CID-keyed CFF into a name-keyed CFF and gives U+0020 its conventional `space`
+glyph name. This preserves every glyph ID, advance width, cmap entry, and
+OpenType layout reference; U+00A0 continues to share the same space outline.
+This targets oversized word spaces reported in applications whose custom-font
+converters recognize the conventional glyph name instead of the Unicode cmap
+alone.
+
 ## Requirements
 
 - FontForge with Python scripting support
@@ -144,7 +152,7 @@ All outputs use:
 
 - Family name: `SNU Appendard`
 - File and PostScript prefix: `SNUAppendard`
-- Version name: `0.6.3` (`head.fontRevision == 0.603`)
+- Version name: `0.6.4` (`head.fontRevision == 0.604`)
 - OpenType/CFF outlines
 - `head.unitsPerEm == 1000`
 

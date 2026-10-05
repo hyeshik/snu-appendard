@@ -14,11 +14,15 @@ FONT_DIR = ROOT / "dist/otf"
 
 
 class CFFPrintCoordinateTests(unittest.TestCase):
-    def test_built_outlines_use_integer_coordinates(self):
+    def built_fonts(self):
         paths = sorted(FONT_DIR.glob("SNUAppendard-*.otf"))
         if not paths:
             self.skipTest("Run the canonical font build first")
-        for path in paths:
+        self.assertEqual(len(paths), 18)
+        return paths
+
+    def test_built_outlines_use_integer_coordinates(self):
+        for path in self.built_fonts():
             with self.subTest(font=path.name), TTFont(path) as font:
                 glyphs = font.getGlyphSet()
                 fractional = []
@@ -38,6 +42,20 @@ class CFFPrintCoordinateTests(unittest.TestCase):
                     f"{path.name}: {len(fractional)} glyphs have fractional "
                     f"CFF coordinates; first ten: {fractional[:10]}",
                 )
+
+    def test_built_fonts_use_a_conventional_name_keyed_space(self):
+        for path in self.built_fonts():
+            with self.subTest(font=path.name), TTFont(path) as font:
+                cmap = font.getBestCmap() or {}
+                self.assertEqual(cmap.get(0x20), "space")
+                self.assertEqual(cmap.get(0xA0), "space")
+                self.assertEqual(font.getGlyphID("space"), 2)
+                self.assertGreater(font["hmtx"]["space"][0], 0)
+
+                top_dict = font["CFF "].cff.topDictIndex[0]
+                self.assertFalse(hasattr(top_dict, "ROS"))
+                self.assertFalse(hasattr(top_dict, "FDArray"))
+                self.assertTrue(hasattr(top_dict, "Private"))
 
 
 if __name__ == "__main__":

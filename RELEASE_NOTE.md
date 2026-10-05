@@ -1,15 +1,15 @@
-# SNU Appendard 0.6.3
+# SNU Appendard 0.6.4
 
-Apply the approved macOS system-font sizing and baseline fit to all 18 upright
-and italic styles, keeping the SNU Appendard family and file names.
+Improve compatibility with custom-font converters that require the conventional
+PostScript glyph name for U+0020 SPACE.
 
-- Scale Hangul and Jamo uniformly by 1.007151371 and raise them 9.432657926 units.
-- Scale Latin and other glyphs uniformly by 0.987723485, including advances,
-  kerning, mark anchors, and hint zones.
-- Set line metrics to 952 / −241 / 0, enable USE_TYPO_METRICS, and keep the Roman
-  baseline of zero while retaining safe Windows clipping bounds.
-- Preserve character coverage, substitutions, style linking, and integer CFF
-  coordinates; check every generated glyph before packaging.
-- Update font metadata and the distribution package to 0.6.3.
+- Convert the one-dictionary CID-keyed CFF output to name-keyed CFF after all
+  outline, spacing, and baseline processing is complete.
+- Name U+0020 `space` while preserving its GID, advance width, cmap mappings,
+  outlines, OpenType layout references, and U+00A0 alias.
+- Verify the normalized CFF structure across all 18 upright and italic styles.
+- Credit Joongi Kim ([@achimnol](https://github.com/achimnol)), who reported
+  [issue #1](https://github.com/hyeshik/snu-appendard/issues/1).
+- Update font metadata and the distribution package to 0.6.4.
 
-`SNUAppendard-0.6.3.zip` contains 18 OTFs and the font licenses.
+`SNUAppendard-0.6.4.zip` contains 18 OTFs and the font licenses.

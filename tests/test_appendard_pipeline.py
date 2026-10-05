@@ -182,6 +182,65 @@ class BuildAppendardContractTests(unittest.TestCase):
             )
 
 
+class SpaceGlyphNormalizationContractTests(unittest.TestCase):
+    def test_space_is_renamed_without_moving_its_glyph_id(self):
+        normalizer = load_module(
+            "normalize_space_glyph", "scripts/normalize_space_glyph.py"
+        )
+        glyph_order = [".notdef", "cid00001", "cid00002", "cid00003"]
+
+        renamed, old_name, gid = normalizer.renamed_space_glyph_order(
+            glyph_order,
+            {0x20: "cid00002", 0xA0: "cid00002"},
+        )
+
+        self.assertEqual(old_name, "cid00002")
+        self.assertEqual(gid, 2)
+        self.assertEqual(renamed, [".notdef", "cid00001", "space", "cid00003"])
+        self.assertEqual(glyph_order[2], "cid00002")
+
+    def test_an_already_normalized_space_is_idempotent(self):
+        normalizer = load_module(
+            "normalize_space_glyph", "scripts/normalize_space_glyph.py"
+        )
+        glyph_order = [".notdef", "space"]
+
+        renamed, old_name, gid = normalizer.renamed_space_glyph_order(
+            glyph_order,
+            {0x20: "space"},
+        )
+
+        self.assertEqual((renamed, old_name, gid), (glyph_order, "space", 1))
+        self.assertIsNot(renamed, glyph_order)
+
+    def test_missing_or_conflicting_space_is_rejected(self):
+        normalizer = load_module(
+            "normalize_space_glyph", "scripts/normalize_space_glyph.py"
+        )
+
+        with self.assertRaisesRegex(ValueError, "does not map U\\+0020"):
+            normalizer.renamed_space_glyph_order([".notdef"], {})
+        with self.assertRaisesRegex(ValueError, "another glyph named 'space'"):
+            normalizer.renamed_space_glyph_order(
+                [".notdef", "cid00002", "space"],
+                {0x20: "cid00002"},
+            )
+
+    def test_normalization_runs_after_all_shape_and_spacing_edits(self):
+        builder = load_module("build_appendard", "scripts/build_appendard.py")
+        source = pathlib.Path(builder.__file__).read_text()
+
+        metadata = source.index("apply_metadata(output_path")
+        guard = source.index("guard_font(output_path")
+        fit = source.index("apply_vertical_fit(output_path")
+        normalize = source.index("normalize_space_glyph(output_path")
+        verify = source.index("verify_otf(output_path")
+        self.assertLess(metadata, guard)
+        self.assertLess(guard, fit)
+        self.assertLess(fit, normalize)
+        self.assertLess(normalize, verify)
+
+
 class MakefileContractTests(unittest.TestCase):
     def test_mapping_is_diagnostic_for_inter_import_model(self):
         makefile = (ROOT / "Makefile").read_text()
@@ -388,8 +447,8 @@ class FixMetadataContractTests(unittest.TestCase):
         builder = load_module("build_appendard", "scripts/build_appendard.py")
         fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
 
-        self.assertEqual(builder.VERSION, "0.6.3")
-        self.assertEqual(fixer.VERSION, "0.6.3")
+        self.assertEqual(builder.VERSION, "0.6.4")
+        self.assertEqual(fixer.VERSION, "0.6.4")
 
     def test_head_revision_reports_our_version_not_pretendards(self):
         fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
@@ -417,8 +476,8 @@ class FixMetadataContractTests(unittest.TestCase):
 
         fixer.normalize_cff_version(font)
 
-        self.assertEqual(top_dict.version, "0.6.3")
-        self.assertEqual(top_dict.CIDFontVersion, 0.603)
+        self.assertEqual(top_dict.version, "0.6.4")
+        self.assertEqual(top_dict.CIDFontVersion, 0.604)
 
     def test_metadata_allows_installable_embedding_under_the_ofl(self):
         fixer = load_module("fix_metadata", "scripts/fix_metadata.py")
@@ -450,7 +509,7 @@ class FixMetadataContractTests(unittest.TestCase):
         self.assertEqual(metadata.names[1], "SNU Appendard")
         self.assertEqual(metadata.names[2], "Italic")
         self.assertEqual(metadata.names[4], "SNU Appendard Italic")
-        self.assertEqual(metadata.names[5], "Version 0.6.3")
+        self.assertEqual(metadata.names[5], "Version 0.6.4")
         self.assertEqual(metadata.names[6], "SNUAppendard-RegularItalic")
         self.assertEqual(metadata.names[16], "SNU Appendard")
         self.assertEqual(metadata.names[17], "Italic")
@@ -703,16 +762,16 @@ class PackageReleaseContractTests(unittest.TestCase):
     def test_release_asset_names_match_github_release_convention(self):
         release = load_module("package_release", "scripts/package_release.py")
 
-        self.assertEqual(release.release_zip_name("0.6.3"), "SNUAppendard-0.6.3.zip")
-        # A tag-style "v0.6.3" names the same asset as a bare "0.6.3".
-        self.assertEqual(release.release_zip_name("v0.6.3"), "SNUAppendard-0.6.3.zip")
+        self.assertEqual(release.release_zip_name("0.6.4"), "SNUAppendard-0.6.4.zip")
+        # A tag-style "v0.6.4" names the same asset as a bare "0.6.4".
+        self.assertEqual(release.release_zip_name("v0.6.4"), "SNUAppendard-0.6.4.zip")
         self.assertEqual(
-            release.checksum_name("0.6.3"),
-            "SNUAppendard-0.6.3.zip.sha256",
+            release.checksum_name("0.6.4"),
+            "SNUAppendard-0.6.4.zip.sha256",
         )
         self.assertEqual(
-            release.release_note_name("0.6.3"),
-            "SNUAppendard-0.6.3-release-notes.md",
+            release.release_note_name("0.6.4"),
+            "SNUAppendard-0.6.4-release-notes.md",
         )
 
     def test_release_zip_layout_matches_previous_github_asset(self):
